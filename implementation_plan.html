@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenSource Connect - Implementation Plan & Git Guide</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --surface: #1e293b;
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #6366f1;
+      --success: #10b981;
+      --warning: #f59e0b;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+
+    h1, h2, h3 {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    h1 {
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      margin-top: 40px;
+      border-left: 4px solid var(--primary);
+      padding-left: 15px;
+      color: #a5b4fc;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .badge {
+      background-color: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.85em;
+      font-weight: bold;
+      display: inline-block;
+    }
+
+    .badge-success {
+      background-color: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+    }
+
+    .badge-warning {
+      background-color: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+    }
+
+    code {
+      font-family: 'Courier New', Courier, monospace;
+      background-color: rgba(0, 0, 0, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      color: #f43f5e;
+    }
+
+    pre {
+      background-color: #030712;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+      overflow-x: auto;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      color: #38bdf8;
+    }
+
+    ul, ol {
+      padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    .step-number {
+      background-color: var(--primary);
+      color: white;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-right: 10px;
+    }
+
+    .step-title {
+      font-size: 1.1em;
+      font-weight: bold;
+      display: inline-flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .flex-container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .flex-col {
+      flex: 1;
+      min-width: 280px;
+    }
+
+    .partner-header {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #a5b4fc;
+      margin-bottom: 10px;
+    }
+
+    /* Copy Button Tooltip style */
+    .command-box {
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      background-color: var(--primary);
+      border: none;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8em;
+    }
+
+    .copy-btn:hover {
+      background-color: #4f46e5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📄 OpenSource Connect - Implementation Plan</h1>
+    <p>This plan is written in simple English. It details how you and your partner can use the <strong>Antigravity AI Coding Assistant</strong> and <strong>Git / GitHub</strong> to build the project together from scratch.</p>
+
+    <!-- Tech Stack -->
+    <h2>🛠️ Our Technology Stack</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Frontend (Client)</strong>: Built using <strong>React.js (Vite)</strong> and styled with <strong>Tailwind CSS</strong>. Custom language graphs will use <strong>Recharts</strong>.</li>
+        <li><strong>Backend (Server)</strong>: Running on <strong>Node.js</strong> and <strong>Express.js</strong>.</li>
+        <li><strong>Database</strong>: <strong>MongoDB</strong> (used to save profile data and saved issues).</li>
+        <li><strong>APIs</strong>: <strong>GitHub API</strong> (to load open issues) and <strong>Google Gemini API</strong> (to generate recommendations and learning roadmaps).</li>
+      </ul>
+    </div>
+
+    <!-- Antigravity Section -->
+    <h2>🤖 How to use Antigravity (AI Assistant)</h2>
+    <div class="card">
+      <p>Since both of you have the Antigravity assistant in your editor, you can ask it to write code for you. Use these simple prompts:</p>
+      <ol>
+        <li>Tell it the exact file name (e.g. <code>Create client/src/pages/Dashboard.jsx</code>).</li>
+        <li>Explain that you are using <strong>React</strong> and <strong>Tailwind CSS</strong>.</li>
+        <li>Describe the design (e.g. <em>"Use a dark theme with a glass-like header card and purple buttons"</em>).</li>
+      </ol>
+    </div>
+
+    <!-- Git & GitHub Guide -->
+    <h2>🤝 How to Use Git & GitHub (Step-by-Step)</h2>
+    <p>Think of GitHub like a shared Google Drive for your code files. Follow these steps to collaborate:</p>
+    
+    <div class="card">
+      <div class="step-title"><span class="step-number">1</span> Install Tools & Configure Identity</div>
+      <p>Download and install <strong>Git</strong> from <a href="https://git-scm.com/" target="_blank" style="color: var(--primary);">git-scm.com</a>. Then, open your terminal inside VS Code and run these config commands:</p>
+      <pre><code>git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"</code></pre>
+
+      <div class="step-title" style="margin-top: 20px;"><span class="step-number">2</span> Copy the Repository (Clone)</div>
+      <p>Both partners run this command to copy the shared files from GitHub to their computers:</p>
+      <pre><code>git clone https://github.com/Ahiram15/OpenSource-Connect.git</code></pre>
+
+      <div class="step-title" style="margin-top: 20px;"><span class="step-number">3</span> Create Your Private Branch</div>
+      <p>Never write code directly on the <code>main</code> branch. Always work on your own branch to avoid conflicts:</p>
+      <p><strong>Partner 1 runs:</strong></p>
+      <pre><code>git checkout -b feature/frontend-user-space</code></pre>
+      <p><strong>Partner 2 runs:</strong></p>
+      <pre><code>git checkout -b feature/frontend-issues</code></pre>
+
+      <div class="step-title" style="margin-top: 20px;"><span class="step-number">4</span> Save & Upload Your Daily Code</div>
+      <p>Run these three commands to save and upload your changes at the end of each session:</p>
+      <pre><code>git add .
+git commit -m "feat: Add styles and cards to dashboard"
+git push origin feature/your-branch-name</code></pre>
+
+      <div class="step-title" style="margin-top: 20px;"><span class="step-number">5</span> Pull Changes from Your Partner</div>
+      <p>To load code updates that your partner has merged into main, run:</p>
+      <pre><code>git checkout main
+git pull origin main
+git checkout feature/your-branch-name
+git merge main</code></pre>
+    </div>
+
+    <!-- Frontend First Sprints -->
+    <h2>🎨 Phase 1: Frontend Development UI (Both Partners)</h2>
+    <p>We work on the user interface screens first. To avoid merge conflicts, we divide the screens page-by-page:</p>
+    
+    <div class="flex-container">
+      <div class="flex-col card">
+        <div class="partner-header">👤 Partner 1: User Layouts</div>
+        <ul>
+          <li><strong>Login Screen</strong> (<code>Login.jsx</code>): Github OAuth sign-in page.</li>
+          <li><strong>Dashboard</strong> (<code>Dashboard.jsx</code>): Panels displaying user skills and language charts.</li>
+          <li><strong>Profile</strong> (<code>Profile.jsx</code>): User interest options checklist.</li>
+        </ul>
+      </div>
+      
+      <div class="flex-col card">
+        <div class="partner-header">🔍 Partner 2: Issue Lists</div>
+        <ul>
+          <li><strong>Issues Feed</strong> (<code>IssueList.jsx</code>): Listing of open issues with Match Score circular progress loops.</li>
+          <li><strong>Filters</strong>: Sorting sidebar by language and difficulty tags.</li>
+          <li><strong>Roadmap Details</strong> (<code>IssueDetail.jsx</code>): Full issue text details alongside learning checkpoints.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Backend -->
+    <h2>⚙️ Phase 2: Backend Development API (Both Partners)</h2>
+    <p>Once all frontend page layouts are merged into main, move to the <code>server/</code> folder to build APIs:</p>
+    
+    <div class="flex-container">
+      <div class="flex-col card">
+        <div class="partner-header">🛡️ Partner 1: Servers & Auth</div>
+        <ul>
+          <li>Setup express server entry points in <code>index.js</code>.</li>
+          <li>Create Mongoose database schemas (Users & Bookmarks).</li>
+          <li>Create GitHub OAuth token authorization endpoints.</li>
+        </ul>
+      </div>
+      
+      <div class="flex-col card">
+        <div class="partner-header">🧠 Partner 2: GitHub API & AI</div>
+        <ul>
+          <li>Configure GitHub API search service triggers.</li>
+          <li>Build Gemini AI prompt filters to generate roadmaps.</li>
+          <li>Create REST endpoints like <code>/api/recommendations</code>.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Mock API Contract -->
+    <h2>📄 Frontend/Backend API Contract (Sample Mock Data)</h2>
+    <p>While the backend is not ready, the frontend developer should use this mock data inside their state variables to preview cards:</p>
+    <pre><code>[
+  {
+    "id": "issue-101",
+    "title": "Fix React routing leak on component unmount",
+    "repository": "facebook/react-router",
+    "stars": 49200,
+    "labels": ["bug", "good first issue"],
+    "matchScore": 92,
+    "explanation": "Matches your profile history because you have React experience.",
+    "difficulty": "Intermediate",
+    "estimatedTime": "2-3 hours",
+    "knowledgeGaps": [
+      "React Router transitions",
+      "Effect unmount cleanup hooks"
+    ],
+    "roadmap": [
+      { "step": 1, "task": "Read React Router documentation on route transitions", "completed": false },
+      { "step": 2, "task": "Locate the memory leak event listener inside code", "completed": false },
+      { "step": 3, "task": "Add a return function inside useEffect to remove listener", "completed": false }
+    ]
+  }
+]</code></pre>
+
+    <!-- Consistency guidelines -->
+    <h2>📈 Tips to Stay Consistent</h2>
+    <div class="card">
+      <ol>
+        <li><strong>Design System Colors</strong>: Save color variables like <code>--bg-dark: #0b0f19</code>, <code>--primary: #6366f1</code> (indigo accent), and <code>--success: #10b981</code> (match green) in <code>client/src/index.css</code>.</li>
+        <li><strong>Track Tasks</strong>: Use <code>task.md</code> checklist items daily (use <code>[/]</code> for in-progress, <code>[x]</code> for complete).</li>
+        <li><strong>5-Minute Daily Syncs</strong>: Discuss what was built, what's next, and if any files are conflicting.</li>
+      </ol>
+    </div>
+  </div>
+</body>
+</html>
