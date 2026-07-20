@@ -81,17 +81,23 @@ const extractUserSkills = async (username, accessToken) => {
         if (accessToken)
             headers['Authorization'] = `Bearer ${accessToken}`;
         const reposResponse = await axios_1.default.get(`https://api.github.com/users/${username}/repos`, {
-            params: { sort: 'updated', per_page: 30 },
+            params: { sort: 'updated', per_page: 100 },
             headers
         });
         if (!reposResponse.data || !Array.isArray(reposResponse.data)) {
-            return { technicalInterests: ['React', 'Node', 'TypeScript'], experienceLevel: 'Beginner' };
+            return {
+                technicalInterests: ['React', 'Node', 'TypeScript', 'Python', 'MongoDB', 'Express'],
+                languageBreakdown: { 'TypeScript': 40, 'React': 25, 'Node': 20, 'Python': 15 },
+                experienceLevel: 'Beginner'
+            };
         }
         const languageCounts = {};
         const topicsSet = new Set();
+        let totalLanguageCount = 0;
         reposResponse.data.forEach((repo) => {
             if (repo.language) {
                 languageCounts[repo.language] = (languageCounts[repo.language] || 0) + 1;
+                totalLanguageCount += 1;
             }
             if (Array.isArray(repo.topics)) {
                 repo.topics.forEach((t) => topicsSet.add(t));
@@ -99,7 +105,13 @@ const extractUserSkills = async (username, accessToken) => {
         });
         // Sort languages by count
         const sortedLanguages = Object.keys(languageCounts).sort((a, b) => languageCounts[b] - languageCounts[a]);
-        const extractedInterests = Array.from(new Set([...sortedLanguages.slice(0, 5), ...Array.from(topicsSet).slice(0, 5)]));
+        // Calculate language percentage breakdown
+        const languageBreakdown = {};
+        sortedLanguages.forEach((lang) => {
+            languageBreakdown[lang] = Math.round((languageCounts[lang] / Math.max(1, totalLanguageCount)) * 100);
+        });
+        // Combine ALL unique extracted languages and ALL extracted topics
+        const extractedInterests = Array.from(new Set([...sortedLanguages, ...Array.from(topicsSet)]));
         const totalRepos = reposResponse.data.length;
         let experienceLevel = 'Beginner';
         if (totalRepos >= 20)
@@ -107,13 +119,18 @@ const extractUserSkills = async (username, accessToken) => {
         else if (totalRepos >= 7)
             experienceLevel = 'Intermediate';
         return {
-            technicalInterests: extractedInterests.length > 0 ? extractedInterests : ['React', 'Node', 'TypeScript'],
+            technicalInterests: extractedInterests.length > 0 ? extractedInterests : ['React', 'Node', 'TypeScript', 'Python'],
+            languageBreakdown: Object.keys(languageBreakdown).length > 0 ? languageBreakdown : { 'TypeScript': 40, 'React': 25, 'Node': 20, 'Python': 15 },
             experienceLevel
         };
     }
     catch (error) {
         console.warn(`[GitHub Skills Warning]: Could not extract skills for ${username}. Using defaults.`);
-        return { technicalInterests: ['React', 'Node', 'TypeScript'], experienceLevel: 'Beginner' };
+        return {
+            technicalInterests: ['React', 'Node', 'TypeScript', 'Python', 'MongoDB', 'Express'],
+            languageBreakdown: { 'TypeScript': 40, 'React': 25, 'Node': 20, 'Python': 15 },
+            experienceLevel: 'Beginner'
+        };
     }
 };
 exports.extractUserSkills = extractUserSkills;

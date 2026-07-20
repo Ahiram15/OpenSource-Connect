@@ -39,6 +39,7 @@ const UserSchema = new mongoose_1.Schema({
     username: { type: String, required: true },
     avatarUrl: { type: String, default: '' },
     technicalInterests: { type: [String], default: ['React', 'Node'] },
+    languageBreakdown: { type: mongoose_1.Schema.Types.Mixed, default: {} },
     experienceLevel: {
         type: String,
         enum: ['Beginner', 'Intermediate', 'Advanced'],

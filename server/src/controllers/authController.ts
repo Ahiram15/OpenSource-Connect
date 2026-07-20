@@ -66,11 +66,13 @@ export const githubCallback = async (req: Request, res: Response): Promise<void>
         username: githubUser.login || githubUser.name || 'GitHub Developer',
         avatarUrl: githubUser.avatar_url || '',
         technicalInterests: extracted.technicalInterests,
+        languageBreakdown: extracted.languageBreakdown,
         experienceLevel: extracted.experienceLevel,
         savedIssueIds: []
       });
     } else {
       user.technicalInterests = extracted.technicalInterests;
+      user.languageBreakdown = extracted.languageBreakdown;
       user.experienceLevel = extracted.experienceLevel;
       await user.save();
     }

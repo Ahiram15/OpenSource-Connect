@@ -5,6 +5,7 @@ export interface IUser extends Document {
   username: string;
   avatarUrl: string;
   technicalInterests: string[];
+  languageBreakdown: Record<string, number>;
   experienceLevel: 'Beginner' | 'Intermediate' | 'Advanced';
   savedIssueIds: string[];
   createdAt: Date;
@@ -17,6 +18,7 @@ const UserSchema: Schema = new Schema(
     username: { type: String, required: true },
     avatarUrl: { type: String, default: '' },
     technicalInterests: { type: [String], default: ['React', 'Node'] },
+    languageBreakdown: { type: Schema.Types.Mixed, default: {} },
     experienceLevel: {
       type: String,
       enum: ['Beginner', 'Intermediate', 'Advanced'],

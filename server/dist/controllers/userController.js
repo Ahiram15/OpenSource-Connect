@@ -10,7 +10,8 @@ const memoryUser = {
     githubId: 'demo-user-123',
     username: 'Alex Developer',
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-    technicalInterests: ['React', 'Node', 'TypeScript'],
+    technicalInterests: ['TypeScript', 'React', 'Node.js', 'Python', 'MongoDB', 'Express', 'CSS', 'HTML'],
+    languageBreakdown: { 'TypeScript': 45, 'React': 25, 'Node.js': 15, 'Python': 10, 'CSS': 5 },
     experienceLevel: 'Beginner',
     savedIssueIds: ['issue-101']
 };

@@ -18,6 +18,7 @@ export interface UserProfile {
   username: string;
   avatarUrl: string;
   technicalInterests: string[];
+  languageBreakdown?: Record<string, number>;
   experienceLevel: 'Beginner' | 'Intermediate' | 'Advanced';
   savedIssueIds: string[];
 }
