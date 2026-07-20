@@ -20,7 +20,7 @@ export const analyzeIssueWithGemini = async (
   if (apiKey && apiKey !== 'your_gemini_api_key') {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
       const prompt = `You are an expert AI mentor for open-source developers.
 Analyze how well this GitHub issue matches a developer's profile and generate a structured JSON response.
@@ -52,7 +52,8 @@ Respond strictly with valid JSON adhering to this interface:
       const cleanJson = text.replace(/```json\n?|\n?```/g, '').trim();
       return JSON.parse(cleanJson);
     } catch (error) {
-      console.warn('[Gemini AI Warning]: Call failed or key invalid. Falling back to heuristic match engine.');
+      console.warn(`[Gemini AI Error Details]:`, (error as Error).message || error);
+      console.warn(`[Gemini AI Info]: Falling back to heuristic match engine.`);
     }
   }
 
