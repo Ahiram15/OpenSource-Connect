@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { connectDB } from './config/db';
 import userRoutes from './routes/userRoutes';
 import issueRoutes from './routes/issueRoutes';
+import authRoutes from './routes/authRoutes';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 });
 
 // Register API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/issues', issueRoutes);
 

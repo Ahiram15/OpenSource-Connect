@@ -1,5 +1,18 @@
 const API_BASE_URL = 'http://localhost:5000/api';
 
+export const setAuthToken = (token: string): void => {
+  localStorage.setItem('token', token);
+};
+
+export const getAuthToken = (): string | null => {
+  return localStorage.getItem('token');
+};
+
+const getHeaders = (): Record<string, string> => {
+  const token = getAuthToken();
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
+
 export interface UserProfile {
   githubId: string;
   username: string;
@@ -25,7 +38,7 @@ export interface IssueItem {
 }
 
 export const fetchUserProfile = async (): Promise<UserProfile> => {
-  const response = await fetch(`${API_BASE_URL}/user/profile`);
+  const response = await fetch(`${API_BASE_URL}/user/profile`, { headers: getHeaders() });
   if (!response.ok) throw new Error('Failed to fetch user profile');
   return response.json();
 };
@@ -33,7 +46,7 @@ export const fetchUserProfile = async (): Promise<UserProfile> => {
 export const updateUserProfile = async (interests: string[], experience: string): Promise<UserProfile> => {
   const response = await fetch(`${API_BASE_URL}/user/profile`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getHeaders() },
     body: JSON.stringify({ technicalInterests: interests, experienceLevel: experience })
   });
   if (!response.ok) throw new Error('Failed to update profile');
