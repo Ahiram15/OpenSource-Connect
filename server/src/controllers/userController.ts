@@ -32,14 +32,15 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
 // PUT /api/user/profile
 export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { technicalInterests, experienceLevel } = req.body;
+    const { technicalInterests, experienceLevel, username } = req.body;
     if (technicalInterests) memoryUser.technicalInterests = technicalInterests;
     if (experienceLevel) memoryUser.experienceLevel = experienceLevel;
+    if (username) memoryUser.username = username;
 
     if (mongoose.connection.readyState === 1) {
       let user = await User.findOneAndUpdate(
         { githubId: 'demo-user-123' },
-        { technicalInterests, experienceLevel },
+        { technicalInterests, experienceLevel, ...(username ? { username } : {}) },
         { new: true, upsert: true }
       );
       res.status(200).json(user);

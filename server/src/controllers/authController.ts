@@ -8,7 +8,8 @@ import { extractUserSkills } from '../services/githubService';
 // GET /api/auth/github
 export const githubLogin = (req: Request, res: Response): void => {
   const clientId = process.env.GITHUB_CLIENT_ID || 'your_github_client_id';
-  const redirectUri = `http://localhost:5000/api/auth/github/callback`;
+  const serverUrl = process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`;
+  const redirectUri = `${serverUrl}/api/auth/github/callback`;
   const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email`;
 
   res.redirect(githubAuthUrl);
@@ -20,9 +21,10 @@ export const githubCallback = async (req: Request, res: Response): Promise<void>
   const clientId = process.env.GITHUB_CLIENT_ID;
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
   const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_key';
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
 
   if (!code) {
-    res.status(400).redirect('http://localhost:5173/login?error=no_code');
+    res.status(400).redirect(`${clientUrl}/login?error=no_code`);
     return;
   }
 
@@ -44,7 +46,7 @@ export const githubCallback = async (req: Request, res: Response): Promise<void>
     if (!accessToken) {
       // Dev fallback redirect if credentials unconfigured
       const devToken = jwt.sign({ githubId: 'demo-user-123', username: 'Alex Developer' }, jwtSecret, { expiresIn: '7d' });
-      res.redirect(`http://localhost:5173/dashboard?token=${devToken}`);
+      res.redirect(`${clientUrl}/dashboard?token=${devToken}`);
       return;
     }
 
@@ -77,19 +79,19 @@ export const githubCallback = async (req: Request, res: Response): Promise<void>
       await user.save();
     }
 
-    // 4. Generate JWT Token
+    // 5. Generate JWT Token
     const token = jwt.sign(
       { githubId: user.githubId, username: user.username },
       jwtSecret,
       { expiresIn: '7d' }
     );
 
-    // 5. Redirect to frontend with token
-    res.redirect(`http://localhost:5173/dashboard?token=${token}`);
+    // 6. Redirect to frontend with token
+    res.redirect(`${clientUrl}/dashboard?token=${token}`);
   } catch (error) {
     console.error('[GitHub OAuth Error]:', (error as Error).message);
     const devToken = jwt.sign({ githubId: 'demo-user-123', username: 'Alex Developer' }, jwtSecret, { expiresIn: '7d' });
-    res.redirect(`http://localhost:5173/dashboard?token=${devToken}`);
+    res.redirect(`${clientUrl}/dashboard?token=${devToken}`);
   }
 };
 

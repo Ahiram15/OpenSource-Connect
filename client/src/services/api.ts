@@ -44,11 +44,11 @@ export const fetchUserProfile = async (): Promise<UserProfile> => {
   return response.json();
 };
 
-export const updateUserProfile = async (interests: string[], experience: string): Promise<UserProfile> => {
+export const updateUserProfile = async (interests: string[], experience: string, username?: string): Promise<UserProfile> => {
   const response = await fetch(`${API_BASE_URL}/user/profile`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...getHeaders() },
-    body: JSON.stringify({ technicalInterests: interests, experienceLevel: experience })
+    body: JSON.stringify({ technicalInterests: interests, experienceLevel: experience, username })
   });
   if (!response.ok) throw new Error('Failed to update profile');
   return response.json();

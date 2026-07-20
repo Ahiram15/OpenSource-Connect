@@ -1,34 +1,34 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Issue, RoadmapStep } from '../types';
-
-const mockIssueDetail: Issue = {
-  id: "issue-101",
-  title: "Fix React routing leak on component unmount",
-  repository: "facebook/react-router",
-  stars: 49200,
-  labels: ["bug", "good first issue"],
-  matchScore: 92,
-  explanation: "Matches your profile history because you have React experience.",
-  difficulty: "Intermediate",
-  language: "React",
-  estimatedTime: "2-3 hours",
-  fullExplanation: "When unmounting a routed view inside React Router v6, event listeners registered during transition transitions are not cleaned up properly, causing a slight memory leak in long-running SPAs.",
-  knowledgeGaps: [
-    "React Router transitions",
-    "Effect unmount cleanup hooks"
-  ],
-  roadmap: [
-    { step: 1, task: "Read React Router documentation on route transitions", completed: false },
-    { step: 2, task: "Locate the memory leak event listener inside code", completed: false },
-    { step: 3, task: "Add a return function inside useEffect to remove listener", completed: false }
-  ]
-};
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { IssueItem } from '../services/api';
 
 export default function IssueDetail(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [roadmap, setRoadmap] = useState<RoadmapStep[]>(mockIssueDetail.roadmap || []);
+  const location = useLocation();
+
+  const stateIssue = (location.state as { issue?: IssueItem })?.issue;
+
+  const currentIssue: IssueItem = stateIssue || {
+    id: id || 'issue-101',
+    title: 'Fix React routing leak on component unmount',
+    repository: 'facebook/react-router',
+    stars: 49200,
+    labels: ['bug', 'good first issue'],
+    matchScore: 92,
+    explanation: 'Matches your profile history because you have React experience.',
+    difficulty: 'Intermediate',
+    estimatedTime: '2-3 hours',
+    knowledgeGaps: ['React Router transitions', 'Effect unmount cleanup hooks'],
+    roadmap: [
+      { step: 1, task: 'Read React Router documentation on route transitions', completed: false },
+      { step: 2, task: 'Locate the memory leak event listener inside code', completed: false },
+      { step: 3, task: 'Add a return function inside useEffect to remove listener', completed: false }
+    ],
+    url: 'https://github.com/facebook/react-router/issues/101'
+  };
+
+  const [roadmap, setRoadmap] = useState(currentIssue.roadmap || []);
 
   const toggleStep = (index: number): void => {
     const updated = [...roadmap];
@@ -37,8 +37,10 @@ export default function IssueDetail(): React.ReactElement {
   };
 
   const openCodespaces = (): void => {
-    window.open(`https://codespaces.new/${mockIssueDetail.repository}`, '_blank', 'noopener,noreferrer');
+    window.open(`https://codespaces.new/${currentIssue.repository}`, '_blank', 'noopener,noreferrer');
   };
+
+  const githubUrl = currentIssue.url || `https://github.com/${currentIssue.repository}`;
 
   return (
     <div style={{ maxWidth: '850px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -55,11 +57,24 @@ export default function IssueDetail(): React.ReactElement {
       <div className="glass-panel" style={{ padding: '32px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '12px' }}>
           <div>
-            <span className="badge-tag" style={{ marginBottom: '8px', display: 'inline-block' }}>
-              {mockIssueDetail.repository}
-            </span>
-            <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>
-              {mockIssueDetail.title}
+            <a 
+              href={`https://github.com/${currentIssue.repository}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="badge-tag"
+              style={{ marginBottom: '8px', display: 'inline-block', textDecoration: 'none' }}
+            >
+              {currentIssue.repository} ↗
+            </a>
+            <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: '8px 0' }}>
+              <a 
+                href={githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#f8fafc', textDecoration: 'none' }}
+              >
+                {currentIssue.title} 🔗
+              </a>
             </h1>
           </div>
 
@@ -77,20 +92,25 @@ export default function IssueDetail(): React.ReactElement {
             fontSize: '1.05rem',
             boxShadow: '0 0 12px rgba(16, 185, 129, 0.25)'
           }}>
-            {mockIssueDetail.matchScore}%
+            {currentIssue.matchScore}%
           </div>
         </div>
 
-        {/* Full Explanation */}
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.6, marginTop: '12px', marginBottom: '20px' }}>
-          {mockIssueDetail.fullExplanation}
-        </p>
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '20px', flexWrap: 'wrap' }}>
+          <a 
+            href={githubUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary"
+            style={{ padding: '10px 20px', fontSize: '0.9rem', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            🔗 Open Original Issue on GitHub
+          </a>
 
-        {/* One-Click Dev Environment Action Button */}
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <button 
             onClick={openCodespaces}
-            className="btn-primary"
+            className="btn-secondary"
             style={{ padding: '10px 20px', fontSize: '0.9rem', borderRadius: '8px' }}
           >
             🚀 Open in GitHub Codespaces
@@ -105,7 +125,7 @@ export default function IssueDetail(): React.ReactElement {
             🤖 AI Match Rationale
           </h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>
-            {mockIssueDetail.explanation}
+            {currentIssue.explanation}
           </p>
         </div>
 
@@ -114,7 +134,7 @@ export default function IssueDetail(): React.ReactElement {
             ⚠️ Knowledge Gaps
           </h3>
           <ul style={{ paddingLeft: '18px', color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>
-            {mockIssueDetail.knowledgeGaps?.map((gap: string) => (
+            {currentIssue.knowledgeGaps?.map((gap: string) => (
               <li key={gap}>{gap}</li>
             ))}
           </ul>
@@ -128,7 +148,7 @@ export default function IssueDetail(): React.ReactElement {
         </h2>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {roadmap.map((item: RoadmapStep, index: number) => (
+          {roadmap.map((item, index: number) => (
             <label 
               key={item.step}
               style={{
