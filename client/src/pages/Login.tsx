@@ -9,7 +9,7 @@ const GithubIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
 
 export default function Login(): React.ReactElement {
   const handleGithubLogin = (): void => {
-    window.location.href = '/dashboard';
+    window.location.href = 'http://localhost:5000/api/auth/github';
   };
 
   return (
