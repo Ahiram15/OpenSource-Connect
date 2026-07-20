@@ -3,6 +3,7 @@ import axios from 'axios';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/authMiddleware';
+import { extractUserSkills } from '../services/githubService';
 
 // GET /api/auth/github
 export const githubLogin = (req: Request, res: Response): void => {
@@ -54,17 +55,24 @@ export const githubCallback = async (req: Request, res: Response): Promise<void>
 
     const githubUser = userResponse.data;
 
-    // 3. Find or create user in MongoDB Atlas
+    // 3. Extract User Skills automatically from Public Repositories
+    const extracted = await extractUserSkills(githubUser.login, accessToken);
+
+    // 4. Find or create user in MongoDB Atlas
     let user = await User.findOne({ githubId: githubUser.id.toString() });
     if (!user) {
       user = await User.create({
         githubId: githubUser.id.toString(),
         username: githubUser.login || githubUser.name || 'GitHub Developer',
         avatarUrl: githubUser.avatar_url || '',
-        technicalInterests: ['React', 'Node', 'TypeScript'],
-        experienceLevel: 'Beginner',
+        technicalInterests: extracted.technicalInterests,
+        experienceLevel: extracted.experienceLevel,
         savedIssueIds: []
       });
+    } else {
+      user.technicalInterests = extracted.technicalInterests;
+      user.experienceLevel = extracted.experienceLevel;
+      await user.save();
     }
 
     // 4. Generate JWT Token

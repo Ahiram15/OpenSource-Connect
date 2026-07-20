@@ -77,3 +77,62 @@ const getFallbackIssues = (): RawGitHubIssue[] => [
     body: 'Add support for root color-scheme property fallback in system preference listener.'
   }
 ];
+
+export interface ExtractedSkills {
+  technicalInterests: string[];
+  experienceLevel: 'Beginner' | 'Intermediate' | 'Advanced';
+}
+
+export const extractUserSkills = async (username: string, accessToken?: string): Promise<ExtractedSkills> => {
+  try {
+    const headers: Record<string, string> = {
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'OpenSource-Connect-App'
+    };
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+
+    const reposResponse = await axios.get(`https://api.github.com/users/${username}/repos`, {
+      params: { sort: 'updated', per_page: 30 },
+      headers
+    });
+
+    if (!reposResponse.data || !Array.isArray(reposResponse.data)) {
+      return { technicalInterests: ['React', 'Node', 'TypeScript'], experienceLevel: 'Beginner' };
+    }
+
+    const languageCounts: Record<string, number> = {};
+    const topicsSet = new Set<string>();
+
+    reposResponse.data.forEach((repo: any) => {
+      if (repo.language) {
+        languageCounts[repo.language] = (languageCounts[repo.language] || 0) + 1;
+      }
+      if (Array.isArray(repo.topics)) {
+        repo.topics.forEach((t: string) => topicsSet.add(t));
+      }
+    });
+
+    // Sort languages by count
+    const sortedLanguages = Object.keys(languageCounts).sort(
+      (a, b) => languageCounts[b] - languageCounts[a]
+    );
+
+    const extractedInterests = Array.from(
+      new Set([...sortedLanguages.slice(0, 5), ...Array.from(topicsSet).slice(0, 5)])
+    );
+
+    const totalRepos = reposResponse.data.length;
+    let experienceLevel: 'Beginner' | 'Intermediate' | 'Advanced' = 'Beginner';
+    if (totalRepos >= 20) experienceLevel = 'Advanced';
+    else if (totalRepos >= 7) experienceLevel = 'Intermediate';
+
+    return {
+      technicalInterests: extractedInterests.length > 0 ? extractedInterests : ['React', 'Node', 'TypeScript'],
+      experienceLevel
+    };
+  } catch (error) {
+    console.warn(`[GitHub Skills Warning]: Could not extract skills for ${username}. Using defaults.`);
+    return { technicalInterests: ['React', 'Node', 'TypeScript'], experienceLevel: 'Beginner' };
+  }
+};
+

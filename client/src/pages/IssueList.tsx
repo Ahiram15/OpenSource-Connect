@@ -1,58 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Issue } from '../types';
-
-const mockIssues: Issue[] = [
-  {
-    id: "issue-101",
-    title: "Fix React routing leak on component unmount",
-    repository: "facebook/react-router",
-    stars: 49200,
-    labels: ["bug", "good first issue"],
-    matchScore: 92,
-    explanation: "Matches your profile history because you have React experience.",
-    difficulty: "good first issue",
-    language: "React",
-    estimatedTime: "2-3 hours"
-  },
-  {
-    id: "issue-102",
-    title: "Add TypeScript definitions for async middleware error handlers",
-    repository: "expressjs/express",
-    stars: 62400,
-    labels: ["help wanted", "good first issue"],
-    matchScore: 88,
-    explanation: "Matches your Node.js and Express backend skill set.",
-    difficulty: "good first issue",
-    language: "Node",
-    estimatedTime: "1-2 hours"
-  },
-  {
-    id: "issue-103",
-    title: "Optimize AST parser speed for multi-line string interpolation",
-    repository: "python/cpython",
-    stars: 58900,
-    labels: ["performance", "Intermediate"],
-    matchScore: 75,
-    explanation: "Good fit based on your Python profile interest.",
-    difficulty: "Intermediate",
-    language: "Python",
-    estimatedTime: "4-5 hours"
-  }
-];
+import { fetchRecommendations, IssueItem } from '../services/api';
 
 export default function IssueList(): React.ReactElement {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('All');
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('javascript');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('good first issue');
+  const [issues, setIssues] = useState<IssueItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const filteredIssues = mockIssues.filter(issue => {
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    fetchRecommendations(selectedLanguage === 'All' ? 'javascript' : selectedLanguage.toLowerCase(), selectedDifficulty === 'All' ? 'good first issue' : selectedDifficulty)
+      .then((data) => {
+        if (isMounted) {
+          setIssues(data);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch live recommendations:', err);
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedLanguage, selectedDifficulty]);
+
+  const filteredIssues = issues.filter(issue => {
     const matchesSearch = issue.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           issue.repository.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLanguage = selectedLanguage === 'All' || issue.language === selectedLanguage;
-    const matchesDifficulty = selectedDifficulty === 'All' || issue.difficulty === selectedDifficulty;
-    return matchesSearch && matchesLanguage && matchesDifficulty;
+    return matchesSearch;
   });
 
   const openCodespaces = (repository: string): void => {
@@ -110,10 +91,10 @@ export default function IssueList(): React.ReactElement {
               cursor: 'pointer'
             }}
           >
-            <option value="All">All Languages</option>
-            <option value="React">React</option>
-            <option value="Node">Node</option>
-            <option value="Python">Python</option>
+            <option value="javascript">JavaScript</option>
+            <option value="typescript">TypeScript</option>
+            <option value="python">Python</option>
+            <option value="react">React</option>
           </select>
         </div>
 
@@ -137,9 +118,9 @@ export default function IssueList(): React.ReactElement {
               cursor: 'pointer'
             }}
           >
-            <option value="All">All Difficulties</option>
             <option value="good first issue">good first issue</option>
-            <option value="Intermediate">Intermediate</option>
+            <option value="help wanted">help wanted</option>
+            <option value="bug">bug</option>
           </select>
         </div>
       </div>
@@ -150,91 +131,103 @@ export default function IssueList(): React.ReactElement {
           Recommended GitHub Issues ({filteredIssues.length})
         </h2>
 
-        {filteredIssues.map((issue: Issue) => (
-          <div 
-            key={issue.id}
-            className="glass-panel"
-            style={{
-              padding: '24px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: '20px'
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              {/* Repository & Language Tags */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                <span className="badge-tag">{issue.repository}</span>
-                <span className="badge-tag" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>
-                  {issue.language}
-                </span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  ★ {issue.stars.toLocaleString()}
-                </span>
-              </div>
-
-              {/* Title */}
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>
-                {issue.title}
-              </h3>
-
-              {/* Labels */}
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {issue.labels.map(label => (
-                  <span 
-                    key={label}
-                    style={{
-                      fontSize: '0.75rem',
-                      color: 'var(--text-muted)',
-                      background: 'rgba(255,255,255,0.06)',
-                      padding: '3px 8px',
-                      borderRadius: '4px'
-                    }}
-                  >
-                    #{label}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Circular Green Match Score Badge & Actions */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', minWidth: '140px' }}>
-              <div style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                border: '2px solid #10b981',
-                background: 'rgba(16, 185, 129, 0.15)',
-                color: '#34d399',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-                fontSize: '1.05rem',
-                boxShadow: '0 0 12px rgba(16, 185, 129, 0.25)'
-              }}>
-                {issue.matchScore}%
-              </div>
-
-              <button 
-                onClick={() => navigate(`/issues/${issue.id}`)}
-                className="btn-primary"
-                style={{ width: '100%', padding: '6px 12px', fontSize: '0.8rem', borderRadius: '6px', justifyContent: 'center' }}
-              >
-                View Roadmap
-              </button>
-
-              <button 
-                onClick={() => openCodespaces(issue.repository)}
-                className="btn-secondary"
-                style={{ width: '100%', padding: '6px 12px', fontSize: '0.78rem', borderRadius: '6px', justifyContent: 'center' }}
-              >
-                🚀 Codespaces
-              </button>
-            </div>
+        {loading ? (
+          <div className="glass-panel" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
+            ⚡ Fetching live GitHub issues & calculating Gemini AI match scores...
           </div>
-        ))}
+        ) : filteredIssues.length === 0 ? (
+          <div className="glass-panel" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
+            No matching issues found for selected filters. Try changing language or label.
+          </div>
+        ) : (
+          filteredIssues.map((issue: IssueItem) => (
+            <div 
+              key={issue.id}
+              className="glass-panel"
+              style={{
+                padding: '24px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '20px'
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                {/* Repository & Stars */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                  <span className="badge-tag">{issue.repository}</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    ★ {issue.stars.toLocaleString()}
+                  </span>
+                </div>
+
+                {/* Title */}
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>
+                  {issue.title}
+                </h3>
+
+                {/* Explanation */}
+                <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                  {issue.explanation}
+                </p>
+
+                {/* Labels */}
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {issue.labels.map(label => (
+                    <span 
+                      key={label}
+                      style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--text-muted)',
+                        background: 'rgba(255,255,255,0.06)',
+                        padding: '3px 8px',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      #{label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Circular Green Match Score Badge & Actions */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', minWidth: '140px' }}>
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  border: '2px solid #10b981',
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  color: '#34d399',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: '1.05rem',
+                  boxShadow: '0 0 12px rgba(16, 185, 129, 0.25)'
+                }}>
+                  {issue.matchScore}%
+                </div>
+
+                <button 
+                  onClick={() => navigate(`/issues/${issue.id}`, { state: { issue } })}
+                  className="btn-primary"
+                  style={{ width: '100%', padding: '6px 12px', fontSize: '0.8rem', borderRadius: '6px', justifyContent: 'center' }}
+                >
+                  View Roadmap
+                </button>
+
+                <button 
+                  onClick={() => openCodespaces(issue.repository)}
+                  className="btn-secondary"
+                  style={{ width: '100%', padding: '6px 12px', fontSize: '0.78rem', borderRadius: '6px', justifyContent: 'center' }}
+                >
+                  🚀 Codespaces
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
