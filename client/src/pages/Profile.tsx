@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 
-const availableInterests = ['React', 'Node', 'Python', 'MongoDB', 'Express', 'JavaScript', 'TypeScript'];
+const availableInterests: string[] = ['React', 'Node', 'Python', 'MongoDB', 'Express', 'JavaScript', 'TypeScript'];
 
-export default function Profile() {
-  const [selectedInterests, setSelectedInterests] = useState(['React', 'Node']);
-  const [experienceLevel, setExperienceLevel] = useState('Beginner');
+export default function Profile(): React.ReactElement {
+  const [selectedInterests, setSelectedInterests] = useState<string[]>(['React', 'Node']);
+  const [experienceLevel, setExperienceLevel] = useState<string>('Beginner');
 
-  const toggleInterest = (tech) => {
+  const toggleInterest = (tech: string): void => {
     if (selectedInterests.includes(tech)) {
       setSelectedInterests(selectedInterests.filter(item => item !== tech));
     } else {

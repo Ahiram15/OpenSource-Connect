@@ -1,15 +1,15 @@
 import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
+import { SkillProficiency } from '../types';
 
-// Dummy skill chart data for visual layout
-const dummySkillData = [
+const dummySkillData: SkillProficiency[] = [
   { language: 'React', level: 85, color: '#6366f1' },
   { language: 'Node.js', level: 75, color: '#38bdf8' },
   { language: 'Python', level: 60, color: '#10b981' },
   { language: 'MongoDB', level: 70, color: '#f59e0b' }
 ];
 
-export default function Dashboard() {
+export default function Dashboard(): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
       {/* Page Title */}
