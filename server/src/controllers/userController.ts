@@ -1,53 +1,67 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import mongoose from 'mongoose';
 import User from '../models/User';
+import { AuthRequest } from '../middleware/authMiddleware';
 
-const memoryUser = {
-  githubId: 'demo-user-123',
-  username: 'Alex Developer',
-  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-  technicalInterests: ['TypeScript', 'React', 'Node.js', 'Python', 'MongoDB', 'Express', 'CSS', 'HTML'],
-  languageBreakdown: { 'TypeScript': 45, 'React': 25, 'Node.js': 15, 'Python': 10, 'CSS': 5 },
-  experienceLevel: 'Beginner',
-  savedIssueIds: ['issue-101']
-};
-
-// GET /api/user/profile
-export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
+// GET /api/user/profile — returns the authenticated user's real profile
+export const getUserProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    if (mongoose.connection.readyState === 1) {
-      let user = await User.findOne({ githubId: 'demo-user-123' });
-      if (!user) {
-        user = await User.create(memoryUser);
+    const githubId = req.user?.githubId;
+
+    if (mongoose.connection.readyState === 1 && githubId) {
+      const user = await User.findOne({ githubId });
+      if (user) {
+        res.status(200).json(user);
+        return;
       }
-      res.status(200).json(user);
-    } else {
-      res.status(200).json(memoryUser);
     }
+
+    // Dev / demo fallback — only used when not authenticated or DB is down
+    res.status(200).json({
+      githubId:         req.user?.githubId || 'demo-user-123',
+      username:         req.user?.username || 'demo',
+      displayName:      req.user?.username || 'Demo Developer',
+      avatarUrl:        'https://avatars.githubusercontent.com/u/0',
+      bio:              'Open-source enthusiast and full-stack developer.',
+      location:         'San Francisco, CA',
+      githubProfileUrl: 'https://github.com',
+      publicRepos:      12,
+      followers:        48,
+      following:        23,
+      technicalInterests: ['TypeScript', 'React', 'Node.js', 'Python', 'MongoDB', 'Express'],
+      languageBreakdown:  { 'TypeScript': 45, 'React': 25, 'Node.js': 15, 'Python': 10, 'CSS': 5 },
+      experienceLevel:    'Beginner',
+      savedIssueIds:      ['issue-101'],
+    });
   } catch (error) {
-    res.status(200).json(memoryUser);
+    res.status(500).json({ error: (error as Error).message });
   }
 };
 
-// PUT /api/user/profile
-export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
+// PUT /api/user/profile — update skills, experience, display name
+export const updateUserProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { technicalInterests, experienceLevel, username } = req.body;
-    if (technicalInterests) memoryUser.technicalInterests = technicalInterests;
-    if (experienceLevel) memoryUser.experienceLevel = experienceLevel;
-    if (username) memoryUser.username = username;
+    const githubId = req.user?.githubId;
+    const { technicalInterests, experienceLevel, displayName } = req.body;
 
-    if (mongoose.connection.readyState === 1) {
-      let user = await User.findOneAndUpdate(
-        { githubId: 'demo-user-123' },
-        { technicalInterests, experienceLevel, ...(username ? { username } : {}) },
-        { new: true, upsert: true }
+    if (mongoose.connection.readyState === 1 && githubId) {
+      const user = await User.findOneAndUpdate(
+        { githubId },
+        {
+          ...(technicalInterests ? { technicalInterests } : {}),
+          ...(experienceLevel    ? { experienceLevel }    : {}),
+          ...(displayName        ? { displayName }        : {}),
+        },
+        { new: true, upsert: false }
       );
-      res.status(200).json(user);
-    } else {
-      res.status(200).json(memoryUser);
+      if (user) {
+        res.status(200).json(user);
+        return;
+      }
     }
+
+    res.status(200).json({ technicalInterests, experienceLevel, displayName });
   } catch (error) {
-    res.status(200).json(memoryUser);
+    res.status(500).json({ error: (error as Error).message });
   }
 };

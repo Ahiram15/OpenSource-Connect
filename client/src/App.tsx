@@ -55,20 +55,7 @@ export default function App(): React.ReactElement {
           <nav style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <NavLink 
               to="/dashboard" 
-              style={({ isActive }: { isActive: boolean }) => ({
-                padding: '8px 16px',
-                borderRadius: '8px',
-                color: isActive ? '#ffffff' : 'var(--text-muted)',
-                background: isActive ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                border: isActive ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                textDecoration: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s ease'
-              })}
+              className={({ isActive }: { isActive: boolean }) => isActive ? "nav-link active" : "nav-link"}
             >
               <LayoutDashboard size={17} />
               Dashboard
@@ -76,20 +63,7 @@ export default function App(): React.ReactElement {
 
             <NavLink 
               to="/issues" 
-              style={({ isActive }: { isActive: boolean }) => ({
-                padding: '8px 16px',
-                borderRadius: '8px',
-                color: isActive ? '#ffffff' : 'var(--text-muted)',
-                background: isActive ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                border: isActive ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                textDecoration: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s ease'
-              })}
+              className={({ isActive }: { isActive: boolean }) => isActive ? "nav-link active" : "nav-link"}
             >
               <Compass size={17} />
               Issue Feed
@@ -97,20 +71,7 @@ export default function App(): React.ReactElement {
 
             <NavLink 
               to="/profile" 
-              style={({ isActive }: { isActive: boolean }) => ({
-                padding: '8px 16px',
-                borderRadius: '8px',
-                color: isActive ? '#ffffff' : 'var(--text-muted)',
-                background: isActive ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                border: isActive ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                textDecoration: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s ease'
-              })}
+              className={({ isActive }: { isActive: boolean }) => isActive ? "nav-link active" : "nav-link"}
             >
               <User size={17} />
               Profile
@@ -127,7 +88,7 @@ export default function App(): React.ReactElement {
         </header>
 
         {/* Page Content */}
-        <main style={{ flex: 1, padding: '32px 24px', maxWidth: '1280px', margin: '0 auto', width: '100%' }}>
+        <main style={{ flex: 1, padding: '32px 32px 48px 32px', maxWidth: '1280px', margin: '0 auto', width: '100%' }}>
           <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />

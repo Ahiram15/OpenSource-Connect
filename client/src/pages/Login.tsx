@@ -13,23 +13,39 @@ export default function Login(): React.ReactElement {
   };
 
   return (
-    <div style={{ maxWidth: '800px', margin: '80px auto 0 auto', textAlign: 'center' }}>
-      <div className="glass-panel" style={{ padding: '48px 32px' }}>
-        <h1 style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '16px' }} className="gradient-text">
-          OpenSource Connect
-        </h1>
-        <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', maxWidth: '600px', margin: '0 auto 36px auto' }}>
+    <div className="animate-fade-in" style={{ minHeight: '75vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div className="glass-panel" style={{ maxWidth: '540px', width: '100%', padding: '64px 48px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
+        
+        {/* Glow-tinted logo icon */}
+        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justify: 'center', color: '#818cf8', fontSize: '1.2rem', fontWeight: 'bold' }}>
+          ✨
+        </div>
+
+        <div>
+          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-dim)', letterSpacing: '0.15em', textTransform: 'uppercase', fontFamily: 'monospace' }}>
+            OpenSource Connect
+          </span>
+          <h1 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#ffffff', marginTop: '6px', letterSpacing: '-0.02em' }}>
+            Find Your Next Contribution
+          </h1>
+        </div>
+
+        <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', maxWidth: '380px', margin: '0 auto', lineHeight: '1.6' }}>
           Connect your GitHub account to get personalized open-source issue recommendations and step-by-step learning roadmaps.
         </p>
 
         <button 
           onClick={handleGithubLogin} 
           className="btn-primary" 
-          style={{ padding: '14px 32px', fontSize: '1.05rem', borderRadius: '10px' }}
+          style={{ padding: '12px 28px', fontSize: '0.88rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px', border: 'none', transition: 'all 0.2s' }}
         >
-          <GithubIcon size={22} />
-          Log in with GitHub
+          <GithubIcon size={18} />
+          Continue with GitHub
         </button>
+
+        <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', letterSpacing: '0.05em', fontFamily: 'monospace', marginTop: '12px' }}>
+          SECURE OAUTH 2.0 PROTOCOL VIA GITHUB
+        </span>
       </div>
     </div>
   );

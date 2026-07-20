@@ -16,7 +16,14 @@ const getHeaders = (): Record<string, string> => {
 export interface UserProfile {
   githubId: string;
   username: string;
+  displayName?: string;
   avatarUrl: string;
+  bio?: string;
+  location?: string;
+  githubProfileUrl?: string;
+  publicRepos?: number;
+  followers?: number;
+  following?: number;
   technicalInterests: string[];
   languageBreakdown?: Record<string, number>;
   experienceLevel: 'Beginner' | 'Intermediate' | 'Advanced';
