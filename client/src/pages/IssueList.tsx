@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Issue } from '../types';
 
-// Sample recommendations mock contract from implementation_plan.md
-const mockIssues = [
+const mockIssues: Issue[] = [
   {
     id: "issue-101",
     title: "Fix React routing leak on component unmount",
@@ -41,11 +41,11 @@ const mockIssues = [
   }
 ];
 
-export default function IssueList() {
+export default function IssueList(): React.ReactElement {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedLanguage, setSelectedLanguage] = useState('All');
-  const [selectedDifficulty, setSelectedDifficulty] = useState('All');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('All');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
 
   const filteredIssues = mockIssues.filter(issue => {
     const matchesSearch = issue.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -54,6 +54,10 @@ export default function IssueList() {
     const matchesDifficulty = selectedDifficulty === 'All' || issue.difficulty === selectedDifficulty;
     return matchesSearch && matchesLanguage && matchesDifficulty;
   });
+
+  const openCodespaces = (repository: string): void => {
+    window.open(`https://codespaces.new/${repository}`, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -72,7 +76,7 @@ export default function IssueList() {
             type="text"
             placeholder="Search repo or title..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
             style={{
               width: '100%',
               padding: '10px 12px',
@@ -93,7 +97,7 @@ export default function IssueList() {
           </label>
           <select 
             value={selectedLanguage}
-            onChange={(e) => setSelectedLanguage(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedLanguage(e.target.value)}
             style={{
               width: '100%',
               padding: '10px 12px',
@@ -120,7 +124,7 @@ export default function IssueList() {
           </label>
           <select 
             value={selectedDifficulty}
-            onChange={(e) => setSelectedDifficulty(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedDifficulty(e.target.value)}
             style={{
               width: '100%',
               padding: '10px 12px',
@@ -146,7 +150,7 @@ export default function IssueList() {
           Recommended GitHub Issues ({filteredIssues.length})
         </h2>
 
-        {filteredIssues.map((issue) => (
+        {filteredIssues.map((issue: Issue) => (
           <div 
             key={issue.id}
             className="glass-panel"
@@ -194,8 +198,8 @@ export default function IssueList() {
               </div>
             </div>
 
-            {/* Circular Green Match Score Badge & CTA */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', minWidth: '110px' }}>
+            {/* Circular Green Match Score Badge & Actions */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', minWidth: '140px' }}>
               <div style={{
                 width: '56px',
                 height: '56px',
@@ -216,9 +220,17 @@ export default function IssueList() {
               <button 
                 onClick={() => navigate(`/issues/${issue.id}`)}
                 className="btn-primary"
-                style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: '6px' }}
+                style={{ width: '100%', padding: '6px 12px', fontSize: '0.8rem', borderRadius: '6px', justifyContent: 'center' }}
               >
                 View Roadmap
+              </button>
+
+              <button 
+                onClick={() => openCodespaces(issue.repository)}
+                className="btn-secondary"
+                style={{ width: '100%', padding: '6px 12px', fontSize: '0.78rem', borderRadius: '6px', justifyContent: 'center' }}
+              >
+                🚀 Codespaces
               </button>
             </div>
           </div>

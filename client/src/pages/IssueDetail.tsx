@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Issue, RoadmapStep } from '../types';
 
-const mockIssueDetail = {
+const mockIssueDetail: Issue = {
   id: "issue-101",
   title: "Fix React routing leak on component unmount",
   repository: "facebook/react-router",
@@ -10,28 +11,33 @@ const mockIssueDetail = {
   matchScore: 92,
   explanation: "Matches your profile history because you have React experience.",
   difficulty: "Intermediate",
+  language: "React",
   estimatedTime: "2-3 hours",
   fullExplanation: "When unmounting a routed view inside React Router v6, event listeners registered during transition transitions are not cleaned up properly, causing a slight memory leak in long-running SPAs.",
   knowledgeGaps: [
     "React Router transitions",
     "Effect unmount cleanup hooks"
   ],
-  initialRoadmap: [
+  roadmap: [
     { step: 1, task: "Read React Router documentation on route transitions", completed: false },
     { step: 2, task: "Locate the memory leak event listener inside code", completed: false },
     { step: 3, task: "Add a return function inside useEffect to remove listener", completed: false }
   ]
 };
 
-export default function IssueDetail() {
-  const { id } = useParams();
+export default function IssueDetail(): React.ReactElement {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [roadmap, setRoadmap] = useState(mockIssueDetail.initialRoadmap);
+  const [roadmap, setRoadmap] = useState<RoadmapStep[]>(mockIssueDetail.roadmap || []);
 
-  const toggleStep = (index) => {
+  const toggleStep = (index: number): void => {
     const updated = [...roadmap];
     updated[index].completed = !updated[index].completed;
     setRoadmap(updated);
+  };
+
+  const openCodespaces = (): void => {
+    window.open(`https://codespaces.new/${mockIssueDetail.repository}`, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -76,9 +82,20 @@ export default function IssueDetail() {
         </div>
 
         {/* Full Explanation */}
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.6, marginTop: '12px' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.6, marginTop: '12px', marginBottom: '20px' }}>
           {mockIssueDetail.fullExplanation}
         </p>
+
+        {/* One-Click Dev Environment Action Button */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button 
+            onClick={openCodespaces}
+            className="btn-primary"
+            style={{ padding: '10px 20px', fontSize: '0.9rem', borderRadius: '8px' }}
+          >
+            🚀 Open in GitHub Codespaces
+          </button>
+        </div>
       </div>
 
       {/* AI Match Rationale & Knowledge Gaps */}
@@ -97,7 +114,7 @@ export default function IssueDetail() {
             ⚠️ Knowledge Gaps
           </h3>
           <ul style={{ paddingLeft: '18px', color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>
-            {mockIssueDetail.knowledgeGaps.map((gap) => (
+            {mockIssueDetail.knowledgeGaps?.map((gap: string) => (
               <li key={gap}>{gap}</li>
             ))}
           </ul>
@@ -111,7 +128,7 @@ export default function IssueDetail() {
         </h2>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {roadmap.map((item, index) => (
+          {roadmap.map((item: RoadmapStep, index: number) => (
             <label 
               key={item.step}
               style={{
