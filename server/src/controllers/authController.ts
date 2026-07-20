@@ -61,21 +61,30 @@ export const githubCallback = async (req: Request, res: Response): Promise<void>
     const extracted = await extractUserSkills(githubUser.login, accessToken);
 
     // 4. Find or create user in MongoDB Atlas
+    const profileData = {
+      username:         githubUser.login,
+      displayName:      githubUser.name || githubUser.login,
+      avatarUrl:        githubUser.avatar_url || '',
+      bio:              githubUser.bio || '',
+      location:         githubUser.location || '',
+      githubProfileUrl: githubUser.html_url || `https://github.com/${githubUser.login}`,
+      publicRepos:      githubUser.public_repos || 0,
+      followers:        githubUser.followers || 0,
+      following:        githubUser.following || 0,
+      technicalInterests: extracted.technicalInterests,
+      languageBreakdown:  extracted.languageBreakdown,
+      experienceLevel:    extracted.experienceLevel,
+    };
+
     let user = await User.findOne({ githubId: githubUser.id.toString() });
     if (!user) {
       user = await User.create({
         githubId: githubUser.id.toString(),
-        username: githubUser.login || githubUser.name || 'GitHub Developer',
-        avatarUrl: githubUser.avatar_url || '',
-        technicalInterests: extracted.technicalInterests,
-        languageBreakdown: extracted.languageBreakdown,
-        experienceLevel: extracted.experienceLevel,
+        ...profileData,
         savedIssueIds: []
       });
     } else {
-      user.technicalInterests = extracted.technicalInterests;
-      user.languageBreakdown = extracted.languageBreakdown;
-      user.experienceLevel = extracted.experienceLevel;
+      Object.assign(user, profileData);
       await user.save();
     }
 

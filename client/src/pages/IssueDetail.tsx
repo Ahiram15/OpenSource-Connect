@@ -29,6 +29,11 @@ export default function IssueDetail(): React.ReactElement {
   };
 
   const [roadmap, setRoadmap] = useState(currentIssue.roadmap || []);
+  const [mounted, setMounted] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toggleStep = (index: number): void => {
     const updated = [...roadmap];
@@ -42,111 +47,159 @@ export default function IssueDetail(): React.ReactElement {
 
   const githubUrl = currentIssue.url || `https://github.com/${currentIssue.repository}`;
 
+  const completedSteps = roadmap.filter(r => r.completed).length;
+  const totalSteps = roadmap.length;
+  const progressPercent = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+
   return (
-    <div style={{ maxWidth: '850px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+    <div className="animate-fade-in" style={{ maxWidth: '850px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '36px', padding: '16px 8px' }}>
+      
       {/* Back Link */}
       <button 
         onClick={() => navigate('/issues')}
         className="btn-secondary"
-        style={{ width: 'fit-content', padding: '6px 14px', fontSize: '0.85rem' }}
+        style={{ width: 'fit-content', padding: '8px 16px', fontSize: '0.8rem', borderRadius: '6px' }}
       >
         ← Back to Issue Feed
       </button>
 
       {/* Header Banner */}
       <div className="glass-panel" style={{ padding: '32px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '12px' }}>
-          <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <a 
               href={`https://github.com/${currentIssue.repository}`}
               target="_blank"
               rel="noopener noreferrer"
               className="badge-tag"
-              style={{ marginBottom: '8px', display: 'inline-block', textDecoration: 'none' }}
+              style={{ display: 'inline-block', textDecoration: 'none', width: 'fit-content' }}
             >
               {currentIssue.repository} ↗
             </a>
-            <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: '8px 0' }}>
+            <h1 style={{ fontSize: '1.25rem', fontWeight: 650, margin: '8px 0 0 0', color: '#ffffff', letterSpacing: '-0.015em' }}>
               <a 
                 href={githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: '#f8fafc', textDecoration: 'none' }}
+                style={{ color: '#ffffff', textDecoration: 'none' }}
               >
-                {currentIssue.title} 🔗
+                {currentIssue.title}
               </a>
             </h1>
           </div>
 
           <div style={{
-            width: '56px',
-            height: '56px',
+            width: '42px',
+            height: '42px',
             borderRadius: '50%',
-            border: '2px solid #10b981',
-            background: 'rgba(16, 185, 129, 0.15)',
-            color: '#34d399',
+            border: '1px solid rgba(16, 185, 129, 0.15)',
+            background: 'rgba(16, 185, 129, 0.05)',
+            color: '#10b981',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: '1.05rem',
-            boxShadow: '0 0 12px rgba(16, 185, 129, 0.25)'
+            fontWeight: 700,
+            fontSize: '0.82rem'
           }}>
             {currentIssue.matchScore}%
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '20px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '24px', flexWrap: 'wrap' }}>
           <a 
             href={githubUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary"
-            style={{ padding: '10px 20px', fontSize: '0.9rem', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            style={{ padding: '10px 18px', fontSize: '0.8rem', borderRadius: '6px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', boxShadow: 'none' }}
           >
-            🔗 Open Original Issue on GitHub
+            Open Original Issue ↗
           </a>
 
           <button 
             onClick={openCodespaces}
             className="btn-secondary"
-            style={{ padding: '10px 20px', fontSize: '0.9rem', borderRadius: '8px' }}
+            style={{ padding: '10px 18px', fontSize: '0.8rem', borderRadius: '6px' }}
           >
-            🚀 Open in GitHub Codespaces
+            Open in Codespace
           </button>
         </div>
       </div>
 
       {/* AI Match Rationale & Knowledge Gaps */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>
-            🤖 AI Match Rationale
-          </h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px' }}>
+        
+        {/* Rationale */}
+        <div className="glass-panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1rem' }}>🧠</span>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 650, color: '#ffffff', margin: 0 }}>
+              AI Match Rationale
+            </h3>
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.5', margin: 0 }}>
             {currentIssue.explanation}
           </p>
         </div>
 
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>
-            ⚠️ Knowledge Gaps
-          </h3>
-          <ul style={{ paddingLeft: '18px', color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>
-            {currentIssue.knowledgeGaps?.map((gap: string) => (
-              <li key={gap}>{gap}</li>
-            ))}
-          </ul>
+        {/* Knowledge Gaps */}
+        <div className="glass-panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1rem' }}>⚠️</span>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 650, color: '#ffffff', margin: 0 }}>
+              Knowledge Gaps
+            </h3>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {currentIssue.knowledgeGaps && currentIssue.knowledgeGaps.length > 0 ? (
+              currentIssue.knowledgeGaps.map((gap: string) => (
+                <div key={gap} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '6px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                  {gap}
+                </div>
+              ))
+            ) : (
+              <p style={{ color: 'var(--text-dim)', fontSize: '0.82rem', margin: 0 }}>
+                No gaps identified! You are fully prepared to contribute.
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Interactive Step-by-Step Learning Roadmap Checklist */}
-      <div className="glass-panel" style={{ padding: '32px' }}>
-        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc', marginBottom: '20px' }}>
-          🗺️ Interactive Learning Roadmap Checklist
-        </h2>
+      <div className="glass-panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        
+        {/* Progress Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 650, color: '#ffffff', margin: 0 }}>
+              Interactive Learning Roadmap
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', margin: '4px 0 0 0' }}>
+              Bridge your knowledge gaps by completing steps sequentially
+            </p>
+          </div>
+          <span style={{ fontSize: '0.78rem', fontFamily: 'monospace', color: 'var(--text-muted)', backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.04)', padding: '6px 12px', borderRadius: '6px' }}>
+            {completedSteps} / {totalSteps} Steps • {progressPercent}%
+          </span>
+        </div>
 
+        {/* Slim progress bar track */}
+        <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '3px', overflow: 'hidden' }}>
+          <div 
+            style={{ 
+              height: '100%', 
+              width: mounted ? `${progressPercent}%` : '0%', 
+              background: 'linear-gradient(90deg, #6366f1 0%, #10b981 100%)',
+              borderRadius: '3px',
+              transition: 'width 1s cubic-bezier(0.16, 1, 0.3, 1)'
+            }} 
+          />
+        </div>
+
+        {/* Checklist Steps */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {roadmap.map((item, index: number) => (
             <label 
@@ -154,31 +207,51 @@ export default function IssueDetail(): React.ReactElement {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '14px',
-                padding: '16px 20px',
-                borderRadius: '10px',
-                background: item.completed ? 'rgba(16, 185, 129, 0.12)' : 'rgba(15, 23, 42, 0.6)',
-                border: item.completed ? '1px solid #10b981' : '1px solid var(--glass-border)',
+                gap: '16px',
+                padding: '18px 24px',
+                borderRadius: '8px',
+                border: item.completed ? '1px solid rgba(16, 185, 129, 0.15)' : '1px solid rgba(255,255,255,0.03)',
+                backgroundColor: item.completed ? 'rgba(16, 185, 129, 0.02)' : 'rgba(255,255,255,0.01)',
                 cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.25s'
               }}
             >
               <input 
                 type="checkbox"
                 checked={item.completed}
                 onChange={() => toggleStep(index)}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                style={{ display: 'none' }}
               />
-              <div style={{ flex: 1 }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: item.completed ? '#34d399' : '#818cf8' }}>
-                  STEP {item.step}
+              
+              {/* Custom Checkbox indicator */}
+              <div style={{
+                width: '18px',
+                height: '18px',
+                borderRadius: '50%',
+                border: item.completed ? '1.5px solid #10b981' : '1.5px solid rgba(255,255,255,0.2)',
+                backgroundColor: item.completed ? '#10b981' : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+                flexShrink: 0
+              }}>
+                {item.completed && (
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ffffff' }} />
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '0.68rem', fontFamily: 'monospace', fontWeight: 600, color: item.completed ? '#10b981' : '#818cf8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Step {item.step}
                 </span>
-                <p style={{
-                  fontSize: '0.95rem',
+                <p style={{ 
+                  fontSize: '0.88rem', 
                   fontWeight: 600,
-                  color: item.completed ? 'var(--text-muted)' : '#f8fafc',
+                  margin: 0, 
                   textDecoration: item.completed ? 'line-through' : 'none',
-                  margin: '2px 0 0 0'
+                  color: item.completed ? 'var(--text-dim)' : 'var(--text-main)',
+                  lineHeight: '1.4'
                 }}>
                   {item.task}
                 </p>
@@ -187,6 +260,7 @@ export default function IssueDetail(): React.ReactElement {
           ))}
         </div>
       </div>
+
     </div>
   );
 }

@@ -37,7 +37,14 @@ const mongoose_1 = __importStar(require("mongoose"));
 const UserSchema = new mongoose_1.Schema({
     githubId: { type: String, required: true, unique: true },
     username: { type: String, required: true },
+    displayName: { type: String, default: '' },
     avatarUrl: { type: String, default: '' },
+    bio: { type: String, default: '' },
+    location: { type: String, default: '' },
+    githubProfileUrl: { type: String, default: '' },
+    publicRepos: { type: Number, default: 0 },
+    followers: { type: Number, default: 0 },
+    following: { type: Number, default: 0 },
     technicalInterests: { type: [String], default: ['React', 'Node'] },
     languageBreakdown: { type: mongoose_1.Schema.Types.Mixed, default: {} },
     experienceLevel: {
