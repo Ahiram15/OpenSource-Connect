@@ -1,6 +1,6 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LogOut, UserCheck, RefreshCw, ArrowRight } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { LogOut, UserCheck, RefreshCw, ArrowRight, AlertTriangle } from 'lucide-react';
 import { logout, isAuthenticated, getAuthUrl } from '../services/api';
 
 const GithubIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
@@ -17,6 +17,10 @@ interface LoginProps {
 
 export default function Login({ loggedIn = false, setLoggedIn }: LoginProps): React.ReactElement {
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const errorMessage = searchParams.get('error');
+
   const isAuth = loggedIn || isAuthenticated();
 
   const handleGithubLogin = (): void => {
@@ -49,6 +53,28 @@ export default function Login({ loggedIn = false, setLoggedIn }: LoginProps): Re
             {isAuth ? 'Session Active' : 'Find Your Next Contribution'}
           </h1>
         </div>
+
+        {errorMessage && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.25)',
+            color: '#f87171',
+            padding: '12px 16px',
+            borderRadius: '10px',
+            fontSize: '0.83rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            textAlign: 'left',
+            width: '100%'
+          }}>
+            <AlertTriangle size={18} style={{ flexShrink: 0 }} />
+            <div>
+              <strong style={{ display: 'block', fontSize: '0.85rem' }}>Authentication Notice</strong>
+              <span>{errorMessage}</span>
+            </div>
+          </div>
+        )}
 
         <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', maxWidth: '380px', margin: '0 auto', lineHeight: '1.6' }}>
           {isAuth

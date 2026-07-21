@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/authMiddleware';
 import { extractUserSkills } from '../services/githubService';
+import { connectDB } from '../config/db';
 
 // GET /api/auth/github
 export const githubLogin = (req: Request, res: Response): void => {
@@ -120,6 +121,8 @@ export const githubCallback = async (req: Request, res: Response): Promise<void>
       experienceLevel:    extracted.experienceLevel,
     };
 
+    await connectDB();
+
     let user = await User.findOne({ githubId: githubUser.id.toString() });
     if (!user) {
       user = await User.create({
@@ -157,6 +160,7 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
       return;
     }
 
+    await connectDB();
     const user = await User.findOne({ githubId });
     if (!user) {
       res.status(404).json({ error: 'User profile not found' });
