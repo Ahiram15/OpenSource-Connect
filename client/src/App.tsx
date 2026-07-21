@@ -159,6 +159,7 @@ export default function App(): React.ReactElement {
         <main style={{ flex: 1, padding: '32px 32px 48px 32px', maxWidth: '1280px', margin: '0 auto', width: '100%' }}>
           <Routes>
             <Route path="/" element={<Login loggedIn={loggedIn} setLoggedIn={setLoggedIn} />} />
+            <Route path="/login" element={<Login loggedIn={loggedIn} setLoggedIn={setLoggedIn} />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/issues" element={<IssueList />} />
             <Route path="/issues/:id" element={<IssueDetail />} />
