@@ -35,10 +35,12 @@ app.use('/user', userRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/issues', issueRoutes);
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`🚀 OpenSource Connect Server listening on http://localhost:${PORT}`);
-  connectDB();
-});
+// Start Server (only when running locally, skip in Vercel serverless)
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 OpenSource Connect Server listening on http://localhost:${PORT}`);
+    connectDB();
+  });
+}
 
 export default app;
