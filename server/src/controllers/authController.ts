@@ -59,7 +59,13 @@ export const githubCallback = async (req: Request, res: Response): Promise<void>
   const clientId = process.env.GITHUB_CLIENT_ID;
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
   const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_key';
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  
+  const host = req.get('host') || 'localhost:5000';
+  const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+  const forwardedProto = req.headers['x-forwarded-proto'] as string;
+  const protocol = forwardedProto || (isLocal ? 'http' : 'https');
+  const defaultClientUrl = isLocal ? 'http://localhost:5173' : `${protocol}://${host}`;
+  const clientUrl = (process.env.CLIENT_URL || process.env.SERVER_URL || defaultClientUrl).replace(/\/$/, '');
 
   if (!code) {
     res.status(400).redirect(`${clientUrl}/login?error=no_code`);

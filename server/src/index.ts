@@ -27,10 +27,13 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
-// Register API Routes
+// Register API Routes (support both /api/ and direct paths for Vercel serverless)
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/user', userRoutes);
 app.use('/api/issues', issueRoutes);
+app.use('/issues', issueRoutes);
 
 // Start Server
 app.listen(PORT, () => {
