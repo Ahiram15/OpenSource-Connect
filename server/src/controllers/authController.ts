@@ -88,9 +88,9 @@ export const githubCallback = async (req: Request, res: Response): Promise<void>
 
     const accessToken = tokenResponse.data.access_token;
     if (!accessToken) {
-      // Dev fallback redirect if credentials unconfigured
-      const devToken = jwt.sign({ githubId: 'demo-user-123', username: 'Alex Developer' }, jwtSecret, { expiresIn: '7d' });
-      res.redirect(`${clientUrl}/dashboard?token=${devToken}`);
+      const errorMsg = tokenResponse.data.error_description || tokenResponse.data.error || 'Failed to obtain access token from GitHub';
+      console.error('[GitHub OAuth Token Error]:', tokenResponse.data);
+      res.redirect(`${clientUrl}/login?error=${encodeURIComponent(errorMsg)}`);
       return;
     }
 
@@ -139,30 +139,30 @@ export const githubCallback = async (req: Request, res: Response): Promise<void>
       { expiresIn: '7d' }
     );
 
-    // 6. Redirect to frontend with token
+    // 6. Redirect to frontend with real authenticated token
     res.redirect(`${clientUrl}/dashboard?token=${token}`);
   } catch (error) {
-    console.error('[GitHub OAuth Error]:', (error as Error).message);
-    const devToken = jwt.sign({ githubId: 'demo-user-123', username: 'Alex Developer' }, jwtSecret, { expiresIn: '7d' });
-    res.redirect(`${clientUrl}/dashboard?token=${devToken}`);
+    const errMessage = (error as Error).message || 'OAuth authentication failed';
+    console.error('[GitHub OAuth Exception]:', errMessage);
+    res.redirect(`${clientUrl}/login?error=${encodeURIComponent(errMessage)}`);
   }
 };
 
 // GET /api/auth/me
 export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const githubId = req.user?.githubId || 'demo-user-123';
-    let user = await User.findOne({ githubId });
-    if (!user) {
-      user = await User.create({
-        githubId,
-        username: req.user?.username || 'Alex Developer',
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-        technicalInterests: ['React', 'Node', 'TypeScript'],
-        experienceLevel: 'Beginner',
-        savedIssueIds: []
-      });
+    const githubId = req.user?.githubId;
+    if (!githubId) {
+      res.status(401).json({ error: 'Unauthorized: No valid session token provided' });
+      return;
     }
+
+    const user = await User.findOne({ githubId });
+    if (!user) {
+      res.status(404).json({ error: 'User profile not found' });
+      return;
+    }
+
     res.status(200).json(user);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
