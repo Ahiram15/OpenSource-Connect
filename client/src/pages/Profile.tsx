@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile, updateUserProfile, logout, UserProfile } from '../services/api';
+import { fetchUserProfile, updateUserProfile, logout, getAuthUrl, UserProfile } from '../services/api';
 import { MapPin, Link2, Users, GitFork, Star, BookOpen, LogOut, RefreshCw, Shield } from 'lucide-react';
 
 const defaultAvailableList: string[] = [
@@ -453,7 +453,7 @@ export default function Profile({ setLoggedIn }: ProfileProps): React.ReactEleme
         <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
           <button
             onClick={() => {
-              window.location.href = 'http://localhost:5000/api/auth/github?relogin=true';
+              window.location.href = getAuthUrl('/api/auth/github?relogin=true');
             }}
             className="btn-secondary"
             style={{ padding: '10px 18px', fontSize: '0.82rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}

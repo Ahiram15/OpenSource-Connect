@@ -1,4 +1,11 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api');
+
+export const getAuthUrl = (path: string = '/api/auth/github'): string => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return `${import.meta.env.VITE_API_BASE_URL.replace(/\/api$/, '')}${path}`;
+  }
+  return window.location.hostname === 'localhost' ? `http://localhost:5000${path}` : path;
+};
 
 export const setAuthToken = (token: string): void => {
   localStorage.setItem('token', token);
@@ -84,5 +91,22 @@ export const toggleIssueBookmark = async (issueId: string): Promise<{ savedIssue
     method: 'POST'
   });
   if (!response.ok) throw new Error('Failed to bookmark issue');
+  return response.json();
+};
+
+export interface AIPRStarter {
+  prTitle: string;
+  implementationOutline: string[];
+  codeDraft: string;
+  prChecklist: string[];
+}
+
+export const fetchPRStarter = async (title: string, body?: string, stack?: string[]): Promise<AIPRStarter> => {
+  const response = await fetch(`${API_BASE_URL}/issues/pr-starter`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders() },
+    body: JSON.stringify({ title, body, stack })
+  });
+  if (!response.ok) throw new Error('Failed to generate PR starter blueprint');
   return response.json();
 };

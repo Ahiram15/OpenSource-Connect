@@ -6,7 +6,7 @@ import Dashboard from './pages/Dashboard';
 import IssueList from './pages/IssueList';
 import IssueDetail from './pages/IssueDetail';
 import Profile from './pages/Profile';
-import { getAuthToken, setAuthToken, logout, isAuthenticated } from './services/api';
+import { getAuthToken, setAuthToken, logout, isAuthenticated, getAuthUrl } from './services/api';
 
 const GithubIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -134,7 +134,7 @@ function HeaderContent({ loggedIn, setLoggedIn }: { loggedIn: boolean; setLogged
           </>
         ) : (
           <a
-            href="http://localhost:5000/api/auth/github"
+            href={getAuthUrl()}
             className="btn-primary"
             style={{ textDecoration: 'none', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px' }}
           >
@@ -165,6 +165,32 @@ export default function App(): React.ReactElement {
             <Route path="/profile" element={<Profile setLoggedIn={setLoggedIn} />} />
           </Routes>
         </main>
+
+        {/* Global Footer */}
+        <footer style={{
+          borderTop: '1px solid var(--glass-border)',
+          background: 'rgba(7, 9, 14, 0.9)',
+          backdropFilter: 'blur(16px)',
+          padding: '24px 32px',
+          marginTop: 'auto'
+        }}>
+          <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'linear-gradient(135deg, #6366f1 0%, #38bdf8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Sparkles size={14} color="#ffffff" />
+              </div>
+              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f8fafc' }}>OpenSource Connect</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontFamily: 'monospace', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '12px' }}>v1.2.0</span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', fontSize: '0.8rem', color: 'var(--text-dim)', flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                GitHub API Status: Operational
+              </span>
+            </div>
+          </div>
+        </footer>
       </div>
     </Router>
   );

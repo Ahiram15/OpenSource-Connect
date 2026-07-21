@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, UserCheck, RefreshCw, ArrowRight } from 'lucide-react';
-import { logout, isAuthenticated } from '../services/api';
+import { logout, isAuthenticated, getAuthUrl } from '../services/api';
 
 const GithubIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -20,11 +20,11 @@ export default function Login({ loggedIn = false, setLoggedIn }: LoginProps): Re
   const isAuth = loggedIn || isAuthenticated();
 
   const handleGithubLogin = (): void => {
-    window.location.href = 'http://localhost:5000/api/auth/github';
+    window.location.href = getAuthUrl();
   };
 
   const handleRelogin = (): void => {
-    window.location.href = 'http://localhost:5000/api/auth/github?relogin=true';
+    window.location.href = getAuthUrl('/api/auth/github?relogin=true');
   };
 
   const handleLogoutClick = (): void => {
