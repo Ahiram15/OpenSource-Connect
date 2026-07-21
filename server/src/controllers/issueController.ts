@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import Issue from '../models/Issue';
 import User from '../models/User';
 import { fetchGitHubIssues } from '../services/githubService';
-import { analyzeIssueWithGemini } from '../services/geminiService';
+import { analyzeIssueWithGemini, generatePRStarterWithGemini } from '../services/geminiService';
 
 // GET /api/issues/recommendations
 export const getRecommendations = async (req: Request, res: Response): Promise<void> => {
@@ -77,6 +77,23 @@ export const toggleBookmark = async (req: Request, res: Response): Promise<void>
 
     await user.save();
     res.status(200).json({ savedIssueIds: user.savedIssueIds });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+};
+
+// POST /api/issues/pr-starter
+export const getPRStarter = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { title, body, stack } = req.body;
+    if (!title) {
+      res.status(400).json({ error: 'Issue title is required' });
+      return;
+    }
+
+    const techStack = Array.isArray(stack) && stack.length > 0 ? stack : ['TypeScript', 'React'];
+    const result = await generatePRStarterWithGemini(title, body || '', techStack);
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { fetchUserProfile, updateUserProfile, UserProfile } from '../services/api';
-import { MapPin, Link2, Users, GitFork, Star, BookOpen } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { fetchUserProfile, updateUserProfile, logout, getAuthUrl, UserProfile } from '../services/api';
+import { MapPin, Link2, Users, GitFork, Star, BookOpen, LogOut, RefreshCw, Shield } from 'lucide-react';
 
 const defaultAvailableList: string[] = [
   'React', 'Node', 'Python', 'MongoDB', 'Express', 'JavaScript',
@@ -13,7 +14,12 @@ const levelMeta: Record<string, { color: string; bg: string; border: string; emo
   Advanced:     { color: '#818cf8', bg: 'rgba(99,102,241,0.08)',  border: 'rgba(99,102,241,0.25)',  emoji: '🚀' },
 };
 
-export default function Profile(): React.ReactElement {
+interface ProfileProps {
+  setLoggedIn?: (val: boolean) => void;
+}
+
+export default function Profile({ setLoggedIn }: ProfileProps): React.ReactElement {
+  const navigate = useNavigate();
   const [profile, setProfile]               = useState<UserProfile | null>(null);
   const [loading, setLoading]               = useState<boolean>(true);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
@@ -431,6 +437,55 @@ export default function Profile(): React.ReactElement {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* ─── Session & Account Management ─────────────────────────────── */}
+      <div className="glass-panel animate-fade-in delay-300" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Shield size={18} color="#818cf8" />
+          <div>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>Account & Session Management</h3>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>Manage your GitHub OAuth session and account access.</p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => {
+              window.location.href = getAuthUrl('/api/auth/github?relogin=true');
+            }}
+            className="btn-secondary"
+            style={{ padding: '10px 18px', fontSize: '0.82rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <RefreshCw size={15} />
+            Switch GitHub Account
+          </button>
+
+          <button
+            onClick={() => {
+              logout();
+              if (setLoggedIn) setLoggedIn(false);
+              navigate('/');
+            }}
+            style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#f87171',
+              padding: '10px 18px',
+              borderRadius: '8px',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <LogOut size={15} />
+            Log Out of Account
+          </button>
         </div>
       </div>
 

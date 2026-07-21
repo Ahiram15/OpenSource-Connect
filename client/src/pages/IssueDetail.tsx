@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { IssueItem } from '../services/api';
+import { IssueItem, fetchPRStarter, AIPRStarter } from '../services/api';
+import { Sparkles, Copy, Check, Code2, GitPullRequest, Terminal, CheckSquare } from 'lucide-react';
 
 export default function IssueDetail(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +31,10 @@ export default function IssueDetail(): React.ReactElement {
 
   const [roadmap, setRoadmap] = useState(currentIssue.roadmap || []);
   const [mounted, setMounted] = useState<boolean>(false);
+  const [prStarter, setPrStarter] = useState<AIPRStarter | null>(null);
+  const [loadingPr, setLoadingPr] = useState<boolean>(false);
+  const [copiedCode, setCopiedCode] = useState<boolean>(false);
+  const [copiedPrBody, setCopiedPrBody] = useState<boolean>(false);
 
   React.useEffect(() => {
     setMounted(true);
@@ -39,6 +44,53 @@ export default function IssueDetail(): React.ReactElement {
     const updated = [...roadmap];
     updated[index].completed = !updated[index].completed;
     setRoadmap(updated);
+  };
+
+  const handleGeneratePRStarter = async (): Promise<void> => {
+    setLoadingPr(true);
+    try {
+      const techStack = [
+        currentIssue.repository.split('/')[0],
+        currentIssue.repository.split('/')[1],
+        ...(currentIssue.labels || []),
+        ...(currentIssue.knowledgeGaps || [])
+      ].filter(Boolean);
+
+      const issueDetails = `${currentIssue.explanation} - ${currentIssue.knowledgeGaps.join(', ')}`;
+      const data = await fetchPRStarter(currentIssue.title, issueDetails, techStack);
+      setPrStarter(data);
+    } catch (err) {
+      console.error('Failed to generate PR starter:', err);
+    } finally {
+      setLoadingPr(false);
+    }
+  };
+
+  const copyCodeDraft = (): void => {
+    if (prStarter?.codeDraft) {
+      navigator.clipboard.writeText(prStarter.codeDraft);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    }
+  };
+
+  const copyPrBody = (): void => {
+    if (prStarter) {
+      const bodyMarkdown = `## ${prStarter.prTitle}
+
+### Summary & Implementation Outline
+${prStarter.implementationOutline.map(step => `- ${step}`).join('\n')}
+
+### Pre-Flight Checklist
+${prStarter.prChecklist.map(item => `- [x] ${item}`).join('\n')}
+
+---
+*Generated with [OpenSource Connect](https://github.com/Ahiram15/OpenSource-Connect)*`;
+
+      navigator.clipboard.writeText(bodyMarkdown);
+      setCopiedPrBody(true);
+      setTimeout(() => setCopiedPrBody(false), 2000);
+    }
   };
 
   const openCodespaces = (): void => {
@@ -166,6 +218,128 @@ export default function IssueDetail(): React.ReactElement {
             )}
           </div>
         </div>
+      </div>
+
+      {/* ─── AI PR Starter & Code Assistant Card ──────────────────────── */}
+      <div className="glass-panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                AI PR Starter & Code Assistant
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', margin: '2px 0 0 0' }}>
+                Generate starter code, solution outline, and copyable PR description
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleGeneratePRStarter}
+            disabled={loadingPr}
+            className="btn-primary"
+            style={{
+              padding: '10px 18px',
+              fontSize: '0.82rem',
+              borderRadius: '8px',
+              cursor: loadingPr ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              opacity: loadingPr ? 0.7 : 1
+            }}
+          >
+            {loadingPr ? (
+              <>
+                <span className="spinner" style={{ width: '14px', height: '14px', border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+                Generating PR Blueprint...
+              </>
+            ) : (
+              <>
+                <GitPullRequest size={16} />
+                {prStarter ? 'Regenerate PR Blueprint' : 'Generate AI PR Blueprint'}
+              </>
+            )}
+          </button>
+        </div>
+
+        {prStarter && (
+          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '10px' }}>
+            {/* PR Title Banner */}
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '10px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <span style={{ fontSize: '0.7rem', fontFamily: 'monospace', fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Recommended PR Title</span>
+                <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#f8fafc', marginTop: '2px', fontFamily: 'monospace' }}>
+                  {prStarter.prTitle}
+                </div>
+              </div>
+
+              <button
+                onClick={copyPrBody}
+                className="btn-secondary"
+                style={{ padding: '8px 14px', fontSize: '0.78rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                {copiedPrBody ? <Check size={14} color="#34d399" /> : <Copy size={14} />}
+                {copiedPrBody ? 'PR Description Copied!' : 'Copy PR Description'}
+              </button>
+            </div>
+
+            {/* Implementation Outline */}
+            <div style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '10px', padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <Terminal size={16} color="#38bdf8" />
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>Implementation Outline</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {prStarter.implementationOutline.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.83rem', color: 'var(--text-muted)' }}>
+                    <span style={{ color: '#38bdf8', fontWeight: 700, fontFamily: 'monospace' }}>{idx + 1}.</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Code Draft Block */}
+            <div style={{ background: 'rgba(7, 9, 14, 0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', overflow: 'hidden' }}>
+              <div style={{ padding: '10px 16px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                  <Code2 size={15} color="#34d399" />
+                  Starter Code Snippet
+                </div>
+                <button
+                  onClick={copyCodeDraft}
+                  style={{ background: 'transparent', border: 'none', color: copiedCode ? '#34d399' : 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'monospace' }}
+                >
+                  {copiedCode ? <Check size={13} /> : <Copy size={13} />}
+                  {copiedCode ? 'Copied Code!' : 'Copy Code'}
+                </button>
+              </div>
+              <pre style={{ margin: 0, padding: '18px 20px', fontSize: '0.82rem', fontFamily: 'monospace', color: '#a5b4fc', overflowX: 'auto', lineHeight: 1.5 }}>
+                <code>{prStarter.codeDraft}</code>
+              </pre>
+            </div>
+
+            {/* Pre-flight PR Checklist */}
+            <div style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '10px', padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <CheckSquare size={16} color="#fbbf24" />
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>PR Submission Checklist</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {prStarter.prChecklist.map((checkItem, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    <span style={{ color: '#34d399', fontSize: '0.9rem' }}>✓</span>
+                    <span>{checkItem}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Interactive Step-by-Step Learning Roadmap Checklist */}
