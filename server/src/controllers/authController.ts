@@ -10,7 +10,9 @@ export const githubLogin = (req: Request, res: Response): void => {
   const clientId = process.env.GITHUB_CLIENT_ID || 'your_github_client_id';
   const serverUrl = process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`;
   const redirectUri = `${serverUrl}/api/auth/github/callback`;
-  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email`;
+  const forceRelogin = req.query.prompt || req.query.relogin;
+  const promptParam = forceRelogin ? `&prompt=consent` : '';
+  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email${promptParam}`;
 
   res.redirect(githubAuthUrl);
 };

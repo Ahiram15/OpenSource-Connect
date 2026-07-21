@@ -8,6 +8,18 @@ export const getAuthToken = (): string | null => {
   return localStorage.getItem('token');
 };
 
+export const removeAuthToken = (): void => {
+  localStorage.removeItem('token');
+};
+
+export const isAuthenticated = (): boolean => {
+  return !!getAuthToken();
+};
+
+export const logout = (): void => {
+  removeAuthToken();
+};
+
 const getHeaders = (): Record<string, string> => {
   const token = getAuthToken();
   return token ? { 'Authorization': `Bearer ${token}` } : {};

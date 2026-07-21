@@ -1,4 +1,7 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { LogOut, UserCheck, RefreshCw, ArrowRight } from 'lucide-react';
+import { logout, isAuthenticated } from '../services/api';
 
 const GithubIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -7,17 +10,34 @@ const GithubIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
   </svg>
 );
 
-export default function Login(): React.ReactElement {
+interface LoginProps {
+  loggedIn?: boolean;
+  setLoggedIn?: (val: boolean) => void;
+}
+
+export default function Login({ loggedIn = false, setLoggedIn }: LoginProps): React.ReactElement {
+  const navigate = useNavigate();
+  const isAuth = loggedIn || isAuthenticated();
+
   const handleGithubLogin = (): void => {
     window.location.href = 'http://localhost:5000/api/auth/github';
   };
 
+  const handleRelogin = (): void => {
+    window.location.href = 'http://localhost:5000/api/auth/github?relogin=true';
+  };
+
+  const handleLogoutClick = (): void => {
+    logout();
+    if (setLoggedIn) setLoggedIn(false);
+  };
+
   return (
     <div className="animate-fade-in" style={{ minHeight: '75vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-      <div className="glass-panel" style={{ maxWidth: '540px', width: '100%', padding: '64px 48px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
+      <div className="glass-panel" style={{ maxWidth: '540px', width: '100%', padding: '56px 44px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
         
         {/* Glow-tinted logo icon */}
-        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justify: 'center', color: '#818cf8', fontSize: '1.2rem', fontWeight: 'bold' }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8', fontSize: '1.2rem', fontWeight: 'bold' }}>
           ✨
         </div>
 
@@ -26,22 +46,81 @@ export default function Login(): React.ReactElement {
             OpenSource Connect
           </span>
           <h1 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#ffffff', marginTop: '6px', letterSpacing: '-0.02em' }}>
-            Find Your Next Contribution
+            {isAuth ? 'Session Active' : 'Find Your Next Contribution'}
           </h1>
         </div>
 
         <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', maxWidth: '380px', margin: '0 auto', lineHeight: '1.6' }}>
-          Connect your GitHub account to get personalized open-source issue recommendations and step-by-step learning roadmaps.
+          {isAuth
+            ? 'You are currently authenticated with GitHub. You can navigate directly to your dashboard or switch accounts.'
+            : 'Connect your GitHub account to get personalized open-source issue recommendations and step-by-step learning roadmaps.'
+          }
         </p>
 
-        <button 
-          onClick={handleGithubLogin} 
-          className="btn-primary" 
-          style={{ padding: '12px 28px', fontSize: '0.88rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px', border: 'none', transition: 'all 0.2s' }}
-        >
-          <GithubIcon size={18} />
-          Continue with GitHub
-        </button>
+        {isAuth ? (
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+            <button 
+              onClick={() => navigate('/dashboard')} 
+              className="btn-primary" 
+              style={{ width: '100%', padding: '12px', fontSize: '0.88rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', border: 'none' }}
+            >
+              <UserCheck size={18} />
+              Go to Dashboard
+              <ArrowRight size={16} />
+            </button>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                onClick={handleRelogin} 
+                className="btn-secondary" 
+                style={{ flex: 1, padding: '10px', fontSize: '0.82rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                <RefreshCw size={15} />
+                Switch GitHub Account
+              </button>
+
+              <button 
+                onClick={handleLogoutClick} 
+                style={{
+                  flex: 1,
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  color: '#f87171',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <LogOut size={15} />
+                Log Out
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+            <button 
+              onClick={handleGithubLogin} 
+              className="btn-primary" 
+              style={{ width: '100%', padding: '12px 28px', fontSize: '0.88rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', border: 'none', transition: 'all 0.2s' }}
+            >
+              <GithubIcon size={18} />
+              Continue with GitHub
+            </button>
+
+            <button
+              onClick={handleRelogin}
+              style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline', marginTop: '4px' }}
+            >
+              Log in with a different GitHub account
+            </button>
+          </div>
+        )}
 
         <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', letterSpacing: '0.05em', fontFamily: 'monospace', marginTop: '12px' }}>
           SECURE OAUTH 2.0 PROTOCOL VIA GITHUB
