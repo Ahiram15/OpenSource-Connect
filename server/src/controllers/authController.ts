@@ -13,7 +13,10 @@ export const githubLogin = (req: Request, res: Response): void => {
   const forwardedProto = req.headers['x-forwarded-proto'] as string;
   const protocol = forwardedProto || (isLocal ? 'http' : 'https');
   
-  const serverUrl = process.env.SERVER_URL || `${protocol}://${host}`;
+  let serverUrl = process.env.SERVER_URL || `${protocol}://${host}`;
+  if (!isLocal && serverUrl.startsWith('http://')) {
+    serverUrl = serverUrl.replace('http://', 'https://');
+  }
   const cleanServerUrl = serverUrl.replace(/\/$/, '');
   const redirectUri = `${cleanServerUrl}/api/auth/github/callback`;
   
@@ -23,6 +26,31 @@ export const githubLogin = (req: Request, res: Response): void => {
 
   console.log(`[GitHub OAuth Redirect URI]: ${redirectUri}`);
   res.redirect(githubAuthUrl);
+};
+
+// GET /api/auth/debug
+export const debugAuth = (req: Request, res: Response): void => {
+  const clientId = process.env.GITHUB_CLIENT_ID || 'UNCONFIGURED';
+  const host = req.get('host') || '';
+  const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+  const forwardedProto = req.headers['x-forwarded-proto'] as string;
+  const protocol = forwardedProto || (isLocal ? 'http' : 'https');
+  let serverUrl = process.env.SERVER_URL || `${protocol}://${host}`;
+  if (!isLocal && serverUrl.startsWith('http://')) {
+    serverUrl = serverUrl.replace('http://', 'https://');
+  }
+  const cleanServerUrl = serverUrl.replace(/\/$/, '');
+  const redirectUri = `${cleanServerUrl}/api/auth/github/callback`;
+
+  res.status(200).json({
+    status: 'OAuth Debug Info',
+    githubClientIdConfigured: !!process.env.GITHUB_CLIENT_ID,
+    clientIdPrefix: clientId.substring(0, 8) + '...',
+    exactRedirectUriGenerated: redirectUri,
+    serverUrlEnvVar: process.env.SERVER_URL || 'NOT_SET',
+    detectedProtocol: protocol,
+    detectedHost: host
+  });
 };
 
 // GET /api/auth/github/callback
