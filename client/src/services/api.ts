@@ -110,3 +110,24 @@ export const fetchPRStarter = async (title: string, body?: string, stack?: strin
   if (!response.ok) throw new Error('Failed to generate PR starter blueprint');
   return response.json();
 };
+
+export interface ChatMessage {
+  role: 'user' | 'model';
+  text: string;
+}
+
+export const sendIssueChatMessage = async (
+  issueId: string,
+  issueTitle: string,
+  issueBody: string,
+  history: ChatMessage[],
+  message: string
+): Promise<{ reply: string }> => {
+  const response = await fetch(`${API_BASE_URL}/issues/${encodeURIComponent(issueId)}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders() },
+    body: JSON.stringify({ issueTitle, issueBody, history, message })
+  });
+  if (!response.ok) throw new Error('Failed to send message to Copilot');
+  return response.json();
+};

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { IssueItem, fetchPRStarter, AIPRStarter } from '../services/api';
-import { Sparkles, Copy, Check, Code2, GitPullRequest, Terminal, CheckSquare } from 'lucide-react';
+import { IssueItem, fetchPRStarter, AIPRStarter, ChatMessage, sendIssueChatMessage } from '../services/api';
+import { Sparkles, Copy, Check, Code2, GitPullRequest, Terminal, CheckSquare, MessageSquare, Send, X } from 'lucide-react';
 
 export default function IssueDetail(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
@@ -36,9 +36,144 @@ export default function IssueDetail(): React.ReactElement {
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [copiedPrBody, setCopiedPrBody] = useState<boolean>(false);
 
+  // AI Issue Copilot Chat States
+  const [chatOpen, setChatOpen] = useState<boolean>(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState<string>('');
+  const [sendingChat, setSendingChat] = useState<boolean>(false);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
   React.useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Auto-scroll to bottom of chat
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, chatOpen]);
+
+  // Send message
+  const handleSendMessage = async (customMessage?: string) => {
+    const textToSend = customMessage || chatInput;
+    if (!textToSend.trim() || sendingChat) return;
+
+    const userMsg: ChatMessage = { role: 'user', text: textToSend };
+    setMessages(prev => [...prev, userMsg]);
+    if (!customMessage) setChatInput('');
+    setSendingChat(true);
+
+    try {
+      const response = await sendIssueChatMessage(
+        currentIssue.id,
+        currentIssue.title,
+        currentIssue.explanation || '',
+        messages,
+        textToSend
+      );
+      const assistantMsg: ChatMessage = { role: 'model', text: response.reply };
+      setMessages(prev => [...prev, assistantMsg]);
+    } catch (err) {
+      console.error(err);
+      const errorMsg: ChatMessage = {
+        role: 'model',
+        text: 'Sorry, I encountered an issue connecting to the Gemini server. Please check that the server is running and try again.'
+      };
+      setMessages(prev => [...prev, errorMsg]);
+    } finally {
+      setSendingChat(false);
+    }
+  };
+
+  const suggestionChips = [
+    { text: '🛠️ Setup Guide', message: 'How do I run and test this repository locally?' },
+    { text: '🔍 File Locations', message: 'Which files should I edit to solve this issue?' },
+    { text: '✏️ Code Fix Draft', message: 'Can you show me a typescript code snippet for the fix?' },
+  ];
+
+  const renderMessageContent = (text: string) => {
+    const lines = text.split('\n');
+    let inCodeBlock = false;
+    let codeContent: string[] = [];
+
+    return lines.map((line, idx) => {
+      if (line.trim().startsWith('```')) {
+        if (inCodeBlock) {
+          inCodeBlock = false;
+          const code = codeContent.join('\n');
+          codeContent = [];
+          return (
+            <pre key={idx} style={{
+              background: '#07090e',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '6px',
+              padding: '12px',
+              fontSize: '0.8rem',
+              fontFamily: 'monospace',
+              color: '#a5b4fc',
+              overflowX: 'auto',
+              margin: '8px 0',
+              whiteSpace: 'pre-wrap'
+            }}>
+              <code>{code}</code>
+            </pre>
+          );
+        } else {
+          inCodeBlock = true;
+          return null;
+        }
+      }
+
+      if (inCodeBlock) {
+        codeContent.push(line);
+        return null;
+      }
+
+      if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+        return (
+          <li key={idx} style={{ marginLeft: '16px', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '4px' }}>
+            {line.trim().substring(2)}
+          </li>
+        );
+      }
+
+      const numMatch = line.trim().match(/^(\d+)\.\s(.*)/);
+      if (numMatch) {
+        return (
+          <li key={idx} style={{ marginLeft: '16px', listStyleType: 'decimal', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '4px' }}>
+            {numMatch[2]}
+          </li>
+        );
+      }
+
+      const parts = line.split(/(`[^`]+`)/g);
+      const lineContent = parts.map((part, pIdx) => {
+        if (part.startsWith('`') && part.endsWith('`')) {
+          return (
+            <code key={pIdx} style={{
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '4px',
+              padding: '2px 6px',
+              fontSize: '0.78rem',
+              fontFamily: 'monospace',
+              color: '#f43f5e'
+            }}>
+              {part.substring(1, part.length - 1)}
+            </code>
+          );
+        }
+        return part;
+      });
+
+      return (
+        <p key={idx} style={{ margin: '4px 0', fontSize: '0.85rem', lineHeight: '1.4', color: 'var(--text-muted)' }}>
+          {lineContent}
+        </p>
+      );
+    }).filter(Boolean);
+  };
 
   const toggleStep = (index: number): void => {
     const updated = [...roadmap];
@@ -434,6 +569,244 @@ ${prStarter.prChecklist.map(item => `- [x] ${item}`).join('\n')}
           ))}
         </div>
       </div>
+
+      <style>{`
+        @keyframes bounce {
+          0%, 80%, 100% { transform: scale(0); }
+          40% { transform: scale(1.0); }
+        }
+      `}</style>
+
+      {/* Floating Chat Button */}
+      {!chatOpen && (
+        <button
+          onClick={() => {
+            setChatOpen(true);
+            if (messages.length === 0) {
+              setMessages([
+                { role: 'model', text: `Hi! I am your AI Copilot for "${currentIssue.title}". How can I help you implement or debug this issue?` }
+              ]);
+            }
+          }}
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 1000,
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+            boxShadow: '0 8px 30px rgba(99, 102, 241, 0.4)',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#ffffff',
+            transition: 'transform 0.2s',
+            WebkitTransition: 'transform 0.2s'
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+        >
+          <MessageSquare size={24} />
+        </button>
+      )}
+
+      {/* Collapsible Chat Panel */}
+      {chatOpen && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 1000,
+          width: '380px',
+          height: '520px',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: '16px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          background: 'rgba(15, 23, 42, 0.95)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.5)',
+          overflow: 'hidden'
+        }}>
+          {/* Header */}
+          <div style={{
+            padding: '16px 20px',
+            background: 'linear-gradient(90deg, rgba(99,102,241,0.15) 0%, rgba(79,70,229,0.15) 100%)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sparkles size={16} color="#818cf8" />
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>AI Issue Copilot</div>
+                <div style={{ fontSize: '0.65rem', color: '#10b981' }}>Active mentor</div>
+              </div>
+            </div>
+            <button 
+              onClick={() => setChatOpen(false)}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Messages Container */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            {messages.map((msg, idx) => (
+              <div 
+                key={idx} 
+                style={{
+                  display: 'flex',
+                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
+                }}
+              >
+                <div style={{
+                  maxWidth: '85%',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  borderTopRightRadius: msg.role === 'user' ? '2px' : '12px',
+                  borderTopLeftRadius: msg.role === 'user' ? '12px' : '2px',
+                  background: msg.role === 'user' ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'rgba(255,255,255,0.03)',
+                  border: msg.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                  color: '#f8fafc',
+                  wordBreak: 'break-word',
+                  textAlign: 'left'
+                }}>
+                  {msg.role === 'user' ? (
+                    <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: '1.4' }}>{msg.text}</p>
+                  ) : (
+                    renderMessageContent(msg.text)
+                  )}
+                </div>
+              </div>
+            ))}
+            
+            {sendingChat && (
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <div style={{
+                  maxWidth: '85%',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <span className="typing-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--text-muted)', display: 'inline-block', animation: 'bounce 1.4s infinite ease-in-out' }} />
+                  <span className="typing-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--text-muted)', display: 'inline-block', animation: 'bounce 1.4s infinite ease-in-out 0.2s' }} />
+                  <span className="typing-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--text-muted)', display: 'inline-block', animation: 'bounce 1.4s infinite ease-in-out 0.4s' }} />
+                </div>
+              </div>
+            )}
+            
+            {/* Suggestion Chips */}
+            {messages.length === 1 && !sendingChat && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', textAlign: 'left' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Suggested questions</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {suggestionChips.map((chip, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSendMessage(chip.message)}
+                      style={{
+                        padding: '10px 14px',
+                        background: 'rgba(99,102,241,0.05)',
+                        border: '1px solid rgba(99,102,241,0.15)',
+                        borderRadius: '8px',
+                        color: '#818cf8',
+                        fontSize: '0.75rem',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(99,102,241,0.1)';
+                        e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(99,102,241,0.05)';
+                        e.currentTarget.style.borderColor = 'rgba(99,102,241,0.15)';
+                      }}
+                    >
+                      {chip.text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input Footer */}
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
+            style={{
+              padding: '16px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'rgba(7, 9, 14, 0.6)',
+              display: 'flex',
+              gap: '8px'
+            }}
+          >
+            <input 
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Ask Copilot..."
+              style={{
+                flex: 1,
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontSize: '0.8rem',
+                color: '#ffffff',
+                outline: 'none',
+                transition: 'border-color 0.2s'
+              }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)')}
+            />
+            <button
+              type="submit"
+              disabled={!chatInput.trim() || sendingChat}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
+                background: chatInput.trim() && !sendingChat ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.05)',
+                color: chatInput.trim() && !sendingChat ? '#ffffff' : 'var(--text-dim)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: chatInput.trim() && !sendingChat ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Send size={16} />
+            </button>
+          </form>
+        </div>
+      )}
 
     </div>
   );
