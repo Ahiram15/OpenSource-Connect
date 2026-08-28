@@ -38,5 +38,31 @@ git clone https://github.com/Ahiram15/OpenSource-Connect.git
 cd OpenSource-Connect
 ```
 
-### 3. Running the Application
-Detailed steps for running the frontend and backend local servers will be added here as development progresses.
+### 3. Environment Configuration
+Create a `.env` file in the `server` directory with the following variables:
+```env
+PORT=5000
+MONGODB_URI=your_mongodb_connection_string
+GITHUB_CLIENT_ID=your_github_oauth_client_id
+GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
+GEMINI_API_KEY=your_google_gemini_api_key
+JWT_SECRET=your_jwt_signing_secret
+```
+
+### 4. Running the Backend Server
+Navigate to the `server` directory, install dependencies, and run the developer dev server:
+```bash
+cd server
+npm install
+npm run dev
+```
+The server will start on `http://localhost:5000`.
+
+### 5. Running the Frontend Client
+Navigate to the `client` directory, install dependencies, and start the Vite dev server:
+```bash
+cd client
+npm install
+npm run dev
+```
+The client will start on `http://localhost:5173`.
