@@ -3,7 +3,8 @@ import mongoose from 'mongoose';
 import Issue from '../models/Issue';
 import User from '../models/User';
 import { fetchGitHubIssues } from '../services/githubService';
-import { analyzeIssueWithGemini, generatePRStarterWithGemini } from '../services/geminiService';
+import { analyzeIssueWithGemini, generatePRStarterWithGemini, chatAboutIssueWithGemini } from '../services/geminiService';
+import { AuthRequest } from '../middleware/authMiddleware';
 
 // GET /api/issues/recommendations
 export const getRecommendations = async (req: Request, res: Response): Promise<void> => {
@@ -94,6 +95,45 @@ export const getPRStarter = async (req: Request, res: Response): Promise<void> =
     const techStack = Array.isArray(stack) && stack.length > 0 ? stack : ['TypeScript', 'React'];
     const result = await generatePRStarterWithGemini(title, body || '', techStack);
     res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+};
+
+// POST /api/issues/:id/chat
+export const chatAboutIssue = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { message, history, issueTitle, issueBody } = req.body;
+
+    if (!message) {
+      res.status(400).json({ error: 'Message is required' });
+      return;
+    }
+
+    // Get user preferences (use real user profile or fallback details)
+    let userInterests = ['TypeScript', 'React', 'Node.js'];
+    let userExperience = 'Beginner';
+
+    const githubId = req.user?.githubId;
+    if (mongoose.connection.readyState === 1 && githubId) {
+      const user = await User.findOne({ githubId });
+      if (user) {
+        userInterests = user.technicalInterests;
+        userExperience = user.experienceLevel;
+      }
+    }
+
+    const reply = await chatAboutIssueWithGemini(
+      issueTitle || 'GitHub Issue',
+      issueBody || '',
+      message,
+      history || [],
+      userInterests,
+      userExperience
+    );
+
+    res.status(200).json({ reply });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }

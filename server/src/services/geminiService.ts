@@ -20,7 +20,7 @@ export const analyzeIssueWithGemini = async (
   if (apiKey && apiKey !== 'your_gemini_api_key') {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
 
       const prompt = `You are an expert AI mentor for open-source developers.
 Analyze how well this GitHub issue matches a developer's profile and generate a structured JSON response.
@@ -103,7 +103,7 @@ export const generatePRStarterWithGemini = async (
   if (apiKey && apiKey !== 'your_gemini_api_key') {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
 
       const prompt = `You are a Principal Open Source Engineer.
 Generate an accurate, copy-pasteable Pull Request code fix draft and starter blueprint for this specific GitHub issue.
@@ -235,4 +235,115 @@ const generateHeuristicPRStarter = (title: string, stack: string[]): AIPRStarter
       'Followed repository contributing guidelines'
     ]
   };
+};
+
+export interface ChatMessage {
+  role: 'user' | 'model';
+  text: string;
+}
+
+export const chatAboutIssueWithGemini = async (
+  issueTitle: string,
+  issueBody: string,
+  userMessage: string,
+  chatHistory: ChatMessage[],
+  userInterests: string[],
+  userExperience: string
+): Promise<string> => {
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (apiKey && apiKey !== 'your_gemini_api_key') {
+    try {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+
+      const systemInstruction = `You are "OpenSource Connect Copilot", an expert AI mentor for open-source developers.
+The developer is currently trying to solve the following GitHub issue:
+- Issue Title: ${issueTitle}
+- Issue Description: ${issueBody}
+
+Developer Profile:
+- Skills/Interests: ${userInterests.join(', ')}
+- Experience Level: ${userExperience}
+
+Your goal is to guide the user in understanding the issue, setting up their workspace, writing code, debugging, or preparing their Pull Request.
+Provide clear, action-oriented, helpful, and concise responses. Use markdown for code formatting.
+If the developer asks for code, provide high-quality, practical code snippets matching the tech stack of the issue.`;
+
+      // Filter out greeting or any model messages before the first user message
+      const firstUserIdx = chatHistory.findIndex((msg) => msg.role === 'user');
+      const cleanHistory = firstUserIdx !== -1 ? chatHistory.slice(firstUserIdx) : [];
+
+      const chat = model.startChat({
+        history: cleanHistory.map((msg) => ({
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.text }],
+        })),
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+      });
+
+      const result = await chat.sendMessage(userMessage);
+      return result.response.text();
+    } catch (error) {
+      console.warn(`[Gemini AI Chat Error Details]:`, (error as Error).message || error);
+      console.warn(`[Gemini AI Info]: Falling back to heuristic chat engine.`);
+    }
+  }
+
+  // Heuristic chat fallback
+  return generateHeuristicChatResponse(userMessage, issueTitle, userInterests);
+};
+
+const generateHeuristicChatResponse = (
+  message: string,
+  issueTitle: string,
+  userInterests: string[]
+): string => {
+  const msgLower = message.toLowerCase();
+  
+  if (msgLower.includes('setup') || msgLower.includes('run') || msgLower.includes('start') || msgLower.includes('install')) {
+    return `To set up and run this project locally, follow these standard steps:
+1. **Clone the repository**:
+   \`\`\`bash
+   git clone https://github.com/example/${issueTitle.toLowerCase().replace(/[^a-z0-9]/g, '-')}.git
+   cd ${issueTitle.toLowerCase().replace(/[^a-z0-9]/g, '-')}
+   \`\`\`
+2. **Install dependencies**:
+   \`\`\`bash
+   npm install
+   \`\`\`
+3. **Start the development server**:
+   \`\`\`bash
+   npm run dev
+   \`\`\`
+Let me know if you encounter any build errors during setup!`;
+  }
+
+  if (msgLower.includes('code') || msgLower.includes('write') || msgLower.includes('snippet') || msgLower.includes('fix')) {
+    const tech = userInterests[0] || 'TypeScript';
+    return `Here is a custom helper draft in **${tech}** to address the issue:
+\`\`\`typescript
+// Suggested helper function
+export const resolveIssueContext = (data: any) => {
+  if (!data) return null;
+  // TODO: Add logic to clean up listener or validate state
+  console.log("Processing resolution draft...");
+  return {
+    ...data,
+    resolvedAt: new Date()
+  };
+};
+\`\`\`
+You can integrate this helper into your main container. Let me know if this makes sense or if you want me to expand it!`;
+  }
+
+  return `Hello! As your AI mentor, I am here to help you solve this issue: "${issueTitle}". 
+
+Feel free to ask me about:
+- Local workspace setup & commands
+- Explaining the file structures
+- Writing or refactoring code snippets in ${userInterests.slice(0, 3).join(', ') || 'your tech stack'}
+- Preparing your Pull Request description
+
+What would you like to tackle first?`;
 };
