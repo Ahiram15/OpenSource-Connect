@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { fetchUserProfile, UserProfile } from '../services/api';
-import { Code2, GitMerge, Bookmark, Award, Sparkles, Download, Flame, GitPullRequest, Star, Zap, ExternalLink, GitFork, Lock, CheckCircle2, TrendingUp } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, RadarChart, PolarGrid, PolarAngleAxis, Radar, BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts';
+import { fetchUserProfile, UserProfile, fetchUserReposFromGitHub, GitHubRepo, fetchRecommendations, IssueItem } from '../services/api';
+import { Code2, GitMerge, Bookmark, Award, Sparkles, Download, Flame, GitPullRequest, Star, Zap, ExternalLink, GitFork, Lock, CheckCircle2 } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 const vibrantGradients = [
   { text: '#818cf8', fill: 'linear-gradient(90deg, #6366f1 0%, #a855f7 100%)', border: 'rgba(99, 102, 241, 0.4)', hex: '#6366f1' },
@@ -133,18 +133,60 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
+const getRelativeTime = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (isNaN(date.getTime())) return 'unknown';
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
+};
+
 export default function Dashboard(): React.ReactElement {
   const [profile, setProfile]       = useState<UserProfile | null>(null);
+  const [repos, setRepos]           = useState<GitHubRepo[]>([]);
+  const [recommended, setRecommended] = useState<IssueItem[]>([]);
   const [mounted, setMounted]       = useState<boolean>(false);
   const [timeframe, setTimeframe]   = useState<string>('All Time');
 
   useEffect(() => {
     fetchUserProfile()
-      .then((data) => setProfile(data))
+      .then((data) => {
+        setProfile(data);
+        if (data.username) {
+          fetchUserReposFromGitHub(data.username)
+            .then((reposData) => {
+              if (Array.isArray(reposData)) {
+                setRepos(reposData);
+              }
+            })
+            .catch((err) => console.error('Failed to fetch GitHub repos:', err));
+        }
+      })
       .catch((err) => console.error('Failed to load dashboard profile:', err));
     const timer = setTimeout(() => setMounted(true), 100);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!profile) return;
+    const topLang = (profile.technicalInterests && profile.technicalInterests[0]) || 
+                    (profile.languageBreakdown && Object.keys(profile.languageBreakdown)[0]) || 
+                    'javascript';
+    fetchRecommendations(topLang.toLowerCase(), 'good first issue')
+      .then((issues) => {
+        if (Array.isArray(issues)) {
+          setRecommended(issues);
+        }
+      })
+      .catch((err) => console.error('Failed to fetch recommendations:', err));
+  }, [profile]);
 
   const handleExport = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(profile || {}, null, 2));
@@ -159,7 +201,9 @@ export default function Dashboard(): React.ReactElement {
   // Simulated timeframe-based data adjustments
   const rawBreakdown = timeframe === 'Last 30 Days'
     ? { 'TypeScript': 52, 'JavaScript': 20, 'React': 18, 'Node.js': 6, 'Python': 4 }
-    : (profile?.languageBreakdown || { 'TypeScript': 40, 'JavaScript': 25, 'React': 15, 'Node.js': 10, 'Python': 10 });
+    : (profile?.languageBreakdown && Object.keys(profile.languageBreakdown).length > 0
+        ? profile.languageBreakdown
+        : { 'TypeScript': 40, 'JavaScript': 25, 'React': 15, 'Node.js': 10, 'Python': 10 });
 
   const chartData = Object.keys(rawBreakdown).map((lang, idx) => ({
     language: lang,
@@ -175,6 +219,86 @@ export default function Dashboard(): React.ReactElement {
   }));
 
   const allExtractedInterests = profile?.technicalInterests || ['TypeScript', 'React', 'Node.js', 'Python', 'MongoDB', 'Express'];
+
+  const totalStars = repos.reduce((acc, r) => acc + (r.stargazers_count || 0), 0);
+
+  // Fallback to dummy data if the user has fewer than 3 public repositories
+  const REPO_BENCHMARK = 3;
+  const isBelowBenchmark = repos.length < REPO_BENCHMARK;
+
+  const displayRecentActivity = !isBelowBenchmark
+    ? repos
+        .slice()
+        .sort((a, b) => new Date(b.pushed_at).getTime() - new Date(a.pushed_at).getTime())
+        .slice(0, 5)
+        .map((r) => ({
+          project: `${profile?.username}/${r.name}`,
+          stack: [r.language || 'JavaScript', ...(r.topics || []).slice(0, 2)],
+          status: 'Active',
+          updated: getRelativeTime(r.pushed_at)
+        }))
+    : recentActivity;
+
+  const impactStats = (profile && !isBelowBenchmark)
+    ? [
+        { icon: <GitPullRequest size={20} color="#818cf8" />, label: 'Public Repos',      value: String(profile.publicRepos),  sub: 'created',      bg: 'rgba(99,102,241,0.1)',  border: 'rgba(99,102,241,0.25)' },
+        { icon: <Star size={20} color="#fbbf24" />,          label: 'Stars Earned',    value: String(totalStars), sub: 'across repos',   bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.25)' },
+        { icon: <Flame size={20} color="#f87171" />,          label: 'Followers',     value: String(profile.followers),  sub: 'on GitHub', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.25)' },
+        { icon: <Zap size={20} color="#34d399" />,             label: 'Following',  value: String(profile.following),  sub: 'developers',          bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.25)' },
+      ]
+    : [
+        { icon: <GitPullRequest size={20} color="#818cf8" />, label: 'PRs Merged',      value: '24',  sub: 'this year',      bg: 'rgba(99,102,241,0.1)',  border: 'rgba(99,102,241,0.25)' },
+        { icon: <Star size={20} color="#fbbf24" />,          label: 'Stars Earned',    value: '312', sub: 'across repos',   bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.25)' },
+        { icon: <Flame size={20} color="#f87171" />,          label: 'Day Streak',     value: '14',  sub: 'current streak', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.25)' },
+        { icon: <Zap size={20} color="#34d399" />,             label: 'Issues Closed',  value: '58',  sub: 'total',          bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.25)' },
+      ];
+
+  const displayRecommendedIssues = recommended.map((issue) => ({
+    repo: issue.repository,
+    title: issue.title,
+    labels: issue.labels,
+    difficulty: issue.difficulty,
+    stars: issue.stars > 1000 ? `${(issue.stars / 1000).toFixed(0)}k` : String(issue.stars),
+    match: issue.matchScore,
+    url: issue.url || `https://github.com/${issue.repository}/issues`
+  }));
+
+  const finalRecommendedIssues = recommended.length > 0 ? displayRecommendedIssues : recommendedIssues;
+
+  const displayTopRepos = !isBelowBenchmark
+    ? repos
+        .slice()
+        .sort((a, b) => b.stargazers_count - a.stargazers_count)
+        .slice(0, 4)
+        .map((r) => ({
+          name: r.name,
+          desc: r.description || 'No description provided.',
+          stars: r.stargazers_count,
+          forks: r.forks_count,
+          lang: r.language || 'HTML/CSS',
+          langColor: vibrantGradients[Math.abs(r.name.length) % vibrantGradients.length].hex,
+          updated: getRelativeTime(r.pushed_at),
+          url: r.html_url
+        }))
+    : topRepos;
+
+  const hasRepos = profile ? profile.publicRepos > 0 : false;
+  const hasStars = totalStars > 0;
+  const isMultiLang = profile ? Object.keys(profile.languageBreakdown || {}).length >= 4 : false;
+  const hasFollowers = profile ? profile.followers >= 5 : false;
+
+  const displayAchievements = !isBelowBenchmark
+    ? [
+        { icon: '🚀', title: 'First PR Merged',     desc: 'Merged your inaugural pull request',          unlocked: hasRepos,  color: '#818cf8' },
+        { icon: '🔥', title: '7-Day Streak',         desc: 'Contributed 7 days in a row',                 unlocked: true,  color: '#f87171' },
+        { icon: '⭐', title: 'Repo Stargazer',       desc: 'Received stars on a public repo',        unlocked: hasStars,  color: '#fbbf24' },
+        { icon: '🐛', title: 'Bug Squasher',         desc: 'Closed 10 bug-labelled issues',               unlocked: true,  color: '#34d399' },
+        { icon: '📖', title: 'Documentation Hero',   desc: 'Authored 5+ README or docs improvements',     unlocked: false, color: '#38bdf8' },
+        { icon: '🌐', title: 'Multi-Language Dev',   desc: 'Committed in 4 or more languages',            unlocked: isMultiLang, color: '#a78bfa' },
+        { icon: '🤝', title: 'Community Builder',    desc: 'Reviewed 20 PRs from other contributors',     unlocked: hasFollowers, color: '#f472b6' },
+        { icon: '💯', title: '100 Commits',          desc: 'Reached 100 total commits across all repos',  unlocked: hasRepos,  color: '#34d399' },
+      ]
+    : achievements;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }} className="animate-fade-in">
@@ -464,12 +588,12 @@ export default function Dashboard(): React.ReactElement {
             </tr>
           </thead>
           <tbody>
-            {recentActivity.map((row, rowIdx) => (
+            {displayRecentActivity.map((row, rowIdx) => (
               <tr
                 key={row.project}
                 className="table-row-hover"
                 style={{
-                  borderBottom: rowIdx < recentActivity.length - 1 ? '1px solid rgba(255,255,255,0.035)' : 'none',
+                  borderBottom: rowIdx < displayRecentActivity.length - 1 ? '1px solid rgba(255,255,255,0.035)' : 'none',
                   transition: 'background 0.18s ease, transform 0.18s ease'
                 }}
               >
@@ -511,13 +635,13 @@ export default function Dashboard(): React.ReactElement {
                     fontSize: '0.78rem',
                     fontFamily: 'monospace',
                     fontWeight: 700,
-                    color: row.status === 'Deployed' ? '#34d399' : '#fbbf24'
+                    color: row.status === 'Deployed' || row.status === 'Active' ? '#34d399' : '#fbbf24'
                   }}>
                     <span
                       style={{
                         width: '7px', height: '7px',
                         borderRadius: '50%',
-                        background: row.status === 'Deployed' ? '#34d399' : '#fbbf24',
+                        background: row.status === 'Deployed' || row.status === 'Active' ? '#34d399' : '#fbbf24',
                         display: 'inline-block',
                         animation: 'pulse-subtle 2s infinite ease-in-out'
                       }}
@@ -545,12 +669,7 @@ export default function Dashboard(): React.ReactElement {
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Your aggregated contribution footprint across the ecosystem</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
-          {[
-            { icon: <GitPullRequest size={20} color="#818cf8" />, label: 'PRs Merged',      value: '24',  sub: 'this year',      bg: 'rgba(99,102,241,0.1)',  border: 'rgba(99,102,241,0.25)' },
-            { icon: <Star size={20} color="#fbbf24" />,          label: 'Stars Earned',    value: '312', sub: 'across repos',   bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.25)' },
-            { icon: <Flame size={20} color="#f87171" />,          label: 'Day Streak',     value: '14',  sub: 'current streak', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.25)' },
-            { icon: <Zap size={20} color="#34d399" />,             label: 'Issues Closed',  value: '58',  sub: 'total',          bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.25)' },
-          ].map((item) => (
+          {impactStats.map((item) => (
             <div
               key={item.label}
               style={{
@@ -576,80 +695,6 @@ export default function Dashboard(): React.ReactElement {
         </div>
       </div>
 
-      {/* ─── Contribution Heatmap + Skill Radar (side-by-side) ────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '28px' }}>
-
-        {/* Contribution Heatmap */}
-        <div className="glass-panel animate-fade-in delay-300" style={{ padding: '28px' }}>
-          <div style={{ marginBottom: '18px' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f8fafc', marginBottom: '4px' }}>
-              🟪 Contribution Heatmap
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Last 16 weeks of activity</p>
-          </div>
-
-          {/* Grid of week columns */}
-          <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '4px' }}>
-            {heatmapData.map((week, wi) => (
-              <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {week.map((level, di) => (
-                  <div
-                    key={di}
-                    title={`${level} contribution${level !== 1 ? 's' : ''}`}
-                    style={{
-                      width: '14px', height: '14px',
-                      borderRadius: '3px',
-                      background: heatColor(level),
-                      border: '1px solid rgba(255,255,255,0.04)',
-                      transition: 'transform 0.15s',
-                      cursor: 'default'
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.4)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-
-          {/* Legend */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '14px' }}>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontFamily: 'monospace' }}>Less</span>
-            {[0,1,2,3,4].map((l) => (
-              <div key={l} style={{ width: '12px', height: '12px', borderRadius: '2px', background: heatColor(l), border: '1px solid rgba(255,255,255,0.04)' }} />
-            ))}
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontFamily: 'monospace' }}>More</span>
-          </div>
-        </div>
-
-        {/* Skill Domain Radar Chart */}
-        <div className="glass-panel animate-fade-in delay-300" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f8fafc', marginBottom: '4px' }}>🕸️ Skill Domain Radar</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Proficiency across technical domains</p>
-          </div>
-          <div style={{ height: '240px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={90}>
-                <PolarGrid stroke="rgba(255,255,255,0.07)" />
-                <PolarAngleAxis
-                  dataKey="domain"
-                  tick={{ fill: '#71717a', fontSize: 11, fontFamily: 'monospace', fontWeight: 600 }}
-                />
-                <Radar
-                  name="Skill"
-                  dataKey="score"
-                  stroke="#6366f1"
-                  fill="rgba(99,102,241,0.25)"
-                  fillOpacity={1}
-                  dot={{ r: 4, fill: '#818cf8', strokeWidth: 0 }}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
       {/* ─── Personalised Recommended Issues ────────────────────────────── */}
       <div className="glass-panel animate-fade-in delay-300" style={{ padding: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '22px', flexWrap: 'wrap', gap: '12px' }}>
@@ -665,7 +710,7 @@ export default function Dashboard(): React.ReactElement {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {recommendedIssues.map((issue) => (
+          {finalRecommendedIssues.map((issue) => (
             <div
               key={issue.title}
               style={{
@@ -719,20 +764,23 @@ export default function Dashboard(): React.ReactElement {
                   <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#818cf8', lineHeight: 1 }}>{issue.match}%</span>
                   <span style={{ fontSize: '0.65rem', fontFamily: 'monospace', color: 'var(--text-dim)', marginTop: '2px' }}>match</span>
                 </div>
-                <button style={{
-                  background: 'rgba(99,102,241,0.12)',
-                  border: '1px solid rgba(99,102,241,0.3)',
-                  color: '#818cf8',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  transition: 'all 0.2s'
-                }}>
+                <button 
+                  onClick={() => window.open(issue.url, '_blank')}
+                  style={{
+                    background: 'rgba(99,102,241,0.12)',
+                    border: '1px solid rgba(99,102,241,0.3)',
+                    color: '#818cf8',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    transition: 'all 0.2s'
+                  }}
+                >
                   View Issue
                   <ExternalLink size={11} />
                 </button>
@@ -751,17 +799,19 @@ export default function Dashboard(): React.ReactElement {
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Ranked by stars — your most impactful public projects</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {topRepos.map((repo, idx) => (
+          {displayTopRepos.map((repo, idx) => (
             <div
               key={repo.name}
               className="language-card-hover"
+              onClick={() => repo.url && window.open(repo.url, '_blank')}
               style={{
                 display: 'flex', alignItems: 'center', gap: '16px',
                 background: 'rgba(255,255,255,0.02)',
                 border: '1px solid rgba(255,255,255,0.05)',
                 borderRadius: '12px', padding: '16px 20px',
                 transition: 'transform 0.2s ease, border-color 0.2s ease',
-                flexWrap: 'wrap'
+                flexWrap: 'wrap',
+                cursor: repo.url ? 'pointer' : 'default'
               }}
             >
               {/* Rank */}
@@ -797,86 +847,6 @@ export default function Dashboard(): React.ReactElement {
         </div>
       </div>
 
-      {/* ─── Commit Frequency + Language Evolution (side-by-side charts) ─ */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '28px' }}>
-
-        {/* Bar: commits per weekday */}
-        <div className="glass-panel animate-fade-in delay-300" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f8fafc', marginBottom: '4px' }}>📅 Weekly Commit Rhythm</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Which days you ship the most code</p>
-          </div>
-          <div style={{ height: '220px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={commitFrequency} barSize={22}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="day" tick={{ fill: '#71717a', fontSize: 11, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#71717a', fontSize: 11, fontFamily: 'monospace' }} axisLine={false} tickLine={false} width={28} />
-                <Tooltip
-                  cursor={{ fill: 'rgba(99,102,241,0.06)' }}
-                  contentStyle={{ background: 'rgba(7,9,14,0.95)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '8px', fontSize: '0.82rem', color: '#f8fafc' }}
-                  formatter={(val: any) => [`${val} commits`, '']}
-                />
-                <Bar dataKey="commits" radius={[4, 4, 0, 0]} fill="url(#barGrad)" />
-                <defs>
-                  <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#818cf8" />
-                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0.6} />
-                  </linearGradient>
-                </defs>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Area: language share over 6 months */}
-        <div className="glass-panel animate-fade-in delay-300" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f8fafc', marginBottom: '4px' }}>
-              <TrendingUp size={18} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px', color: '#34d399' }} />
-              Language Evolution
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>How your stack share shifted over 6 months</p>
-          </div>
-          <div style={{ height: '220px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={langEvolution}>
-                <defs>
-                  <linearGradient id="tsGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="jsGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="pyGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#34d399" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 11, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#71717a', fontSize: 11, fontFamily: 'monospace' }} axisLine={false} tickLine={false} width={28} />
-                <Tooltip contentStyle={{ background: 'rgba(7,9,14,0.95)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '8px', fontSize: '0.8rem', color: '#f8fafc' }} />
-                <Area type="monotone" dataKey="TypeScript" stroke="#6366f1" strokeWidth={2} fill="url(#tsGrad)" dot={false} />
-                <Area type="monotone" dataKey="JavaScript" stroke="#38bdf8" strokeWidth={2} fill="url(#jsGrad)" dot={false} />
-                <Area type="monotone" dataKey="Python"     stroke="#34d399" strokeWidth={2} fill="url(#pyGrad)" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          {/* Legend */}
-          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-            {[['TypeScript','#6366f1'],['JavaScript','#38bdf8'],['Python','#34d399']].map(([lang,col]) => (
-              <div key={lang} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: col }} />
-                <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-dim)', fontWeight: 600 }}>{lang}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* ─── Achievement Badges ─────────────────────────────────────────── */}
       <div className="glass-panel animate-fade-in delay-300" style={{ padding: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px', flexWrap: 'wrap', gap: '12px' }}>
@@ -887,12 +857,12 @@ export default function Dashboard(): React.ReactElement {
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Milestones earned from your open-source journey</p>
           </div>
           <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', fontWeight: 600, color: '#34d399', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.25)', padding: '4px 12px', borderRadius: '20px' }}>
-            {achievements.filter(a => a.unlocked).length} / {achievements.length} Unlocked
+            {displayAchievements.filter(a => a.unlocked).length} / {displayAchievements.length} Unlocked
           </span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '14px' }}>
-          {achievements.map((ach) => (
+          {displayAchievements.map((ach) => (
             <div
               key={ach.title}
               className="language-card-hover"

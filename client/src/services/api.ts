@@ -131,3 +131,21 @@ export const sendIssueChatMessage = async (
   if (!response.ok) throw new Error('Failed to send message to Copilot');
   return response.json();
 };
+
+export interface GitHubRepo {
+  name: string;
+  description: string;
+  stargazers_count: number;
+  forks_count: number;
+  language: string | null;
+  pushed_at: string;
+  html_url: string;
+  topics?: string[];
+}
+
+export const fetchUserReposFromGitHub = async (username: string): Promise<GitHubRepo[]> => {
+  const response = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=100`);
+  if (!response.ok) throw new Error('Failed to fetch repositories from GitHub');
+  return response.json();
+};
+
