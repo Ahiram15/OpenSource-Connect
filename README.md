@@ -1,5 +1,7 @@
 # **OpenSource Connect**
 
+> **Live Deployment:** [open-source-connect-five.vercel.app](https://open-source-connect-five.vercel.app/)
+
 **OpenSource Connect** is an AI-powered web platform designed to simplify the process of contributing to open-source software. Many developers, especially beginners, struggle to find GitHub issues that match their technical skills and experience. Searching through thousands of repositories and understanding issue requirements can be time-consuming and discouraging.
 
 This platform addresses that problem by intelligently recommending suitable GitHub issues based on a developer's profile, skills, interests, and previous contributions.
