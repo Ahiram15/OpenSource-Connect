@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, UserCheck, RefreshCw, ArrowRight, AlertTriangle } from 'lucide-react';
+import { LogOut, UserCheck, RefreshCw, ArrowRight, AlertTriangle, Sparkles } from 'lucide-react';
 import { logout, isAuthenticated, getAuthUrl } from '../services/api';
 
 const GithubIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
