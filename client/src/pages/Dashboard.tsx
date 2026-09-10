@@ -53,11 +53,22 @@ const heatColor = (level: number) => {
   return '#FFF4B7';
 };
 
-const topRepos = [
-  { name: 'OpenSource-Connect', desc: 'GitHub skill extractor & roadmap generator for devs', stars: 48, forks: 12, lang: 'TypeScript', langColor: '#FFF4B7', updated: '2h ago' },
-  { name: 'react-hooks-toolkit', desc: 'Collection of production-ready custom React hooks', stars: 312, forks: 67, lang: 'TypeScript', langColor: '#FFF4B7', updated: '3d ago' },
-  { name: 'api-rate-limiter', desc: 'Express middleware for fine-grained rate limiting', stars: 89, forks: 21, lang: 'JavaScript', langColor: '#38bdf8', updated: '1w ago' },
-  { name: 'py-data-pipeline', desc: 'ETL pipeline toolkit for data engineering workflows', stars: 56, forks: 14, lang: 'Python', langColor: '#34d399', updated: '2w ago' },
+interface DisplayRepo {
+  name: string;
+  desc: string;
+  stars: number;
+  forks: number;
+  lang: string;
+  langColor: string;
+  updated: string;
+  url?: string;
+}
+
+const topRepos: DisplayRepo[] = [
+  { name: 'OpenSource-Connect', desc: 'GitHub skill extractor & roadmap generator for devs', stars: 48, forks: 12, lang: 'TypeScript', langColor: '#FFF4B7', updated: '2h ago', url: 'https://github.com/Ahiram15/OpenSource-Connect' },
+  { name: 'react-hooks-toolkit', desc: 'Collection of production-ready custom React hooks', stars: 312, forks: 67, lang: 'TypeScript', langColor: '#FFF4B7', updated: '3d ago', url: 'https://github.com' },
+  { name: 'api-rate-limiter', desc: 'Express middleware for fine-grained rate limiting', stars: 89, forks: 21, lang: 'JavaScript', langColor: '#38bdf8', updated: '1w ago', url: 'https://github.com' },
+  { name: 'py-data-pipeline', desc: 'ETL pipeline toolkit for data engineering workflows', stars: 56, forks: 14, lang: 'Python', langColor: '#34d399', updated: '2w ago', url: 'https://github.com' },
 ];
 
 const achievements = [
@@ -548,20 +559,20 @@ export default function Dashboard(): React.ReactElement {
                 onClick={() => repo.url && window.open(repo.url, '_blank')}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '16px',
-                  background: 'rgba(17, 45, 78, 0.85)',
-                  border: '1px solid rgba(63, 114, 175, 0.35)',
+                  background: 'rgba(4, 8, 20, 0.85)',
+                  border: '1px solid rgba(0, 106, 103, 0.35)',
                   borderRadius: '12px', padding: '14px 18px',
                   cursor: repo.url ? 'pointer' : 'default'
                 }}
               >
-                <span style={{ fontSize: '0.75rem', fontFamily: 'JetBrains Mono, monospace', color: '#DBE2EF', fontWeight: 700, minWidth: '20px' }}>#{idx + 1}</span>
+                <span style={{ fontSize: '0.75rem', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-dim)', fontWeight: 700, minWidth: '20px' }}>#{idx + 1}</span>
 
                 <div style={{ flex: 1, minWidth: '160px' }}>
-                  <div style={{ fontWeight: 700, color: '#F9F7F7', fontSize: '0.9rem', marginBottom: '2px', fontFamily: 'Sora, sans-serif' }}>{repo.name}</div>
-                  <div style={{ fontSize: '0.78rem', color: '#DBE2EF' }}>{repo.desc}</div>
+                  <div style={{ fontWeight: 700, color: '#f8fafc', fontSize: '0.9rem', marginBottom: '2px', fontFamily: 'Sora, sans-serif' }}>{repo.name}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{repo.desc}</div>
                 </div>
 
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: repo.langColor, background: 'rgba(63, 114, 175, 0.25)', border: `1px solid ${repo.langColor}45`, padding: '2px 8px', borderRadius: '6px' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: repo.langColor, background: 'rgba(0, 106, 103, 0.25)', border: `1px solid ${repo.langColor}45`, padding: '2px 8px', borderRadius: '6px' }}>
                   {repo.lang}
                 </span>
 
