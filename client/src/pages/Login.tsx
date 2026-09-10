@@ -39,17 +39,17 @@ export default function Login({ loggedIn = false, setLoggedIn }: LoginProps): Re
   return (
     <div className="animate-fade-in" style={{ minHeight: '75vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
       <div className="glass-panel" style={{ maxWidth: '540px', width: '100%', padding: '56px 44px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
-        
+
         {/* Glow-tinted logo icon */}
-        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8', fontSize: '1.2rem', fontWeight: 'bold' }}>
-          ✨
+        <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: 'rgba(0, 106, 103, 0.25)', border: '1px solid rgba(255, 244, 183, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(0, 106, 103, 0.35)' }}>
+          <Sparkles size={24} color="#FFF4B7" />
         </div>
 
         <div>
-          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-dim)', letterSpacing: '0.15em', textTransform: 'uppercase', fontFamily: 'monospace' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#FFF4B7', letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: 'JetBrains Mono, monospace' }}>
             OpenSource Connect
           </span>
-          <h1 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#ffffff', marginTop: '6px', letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#ffffff', marginTop: '6px', letterSpacing: '-0.035em', fontFamily: 'Sora, Outfit, sans-serif' }} className="gradient-text">
             {isAuth ? 'Session Active' : 'Find Your Next Contribution'}
           </h1>
         </div>
@@ -70,24 +70,24 @@ export default function Login({ loggedIn = false, setLoggedIn }: LoginProps): Re
           }}>
             <AlertTriangle size={18} style={{ flexShrink: 0 }} />
             <div>
-              <strong style={{ display: 'block', fontSize: '0.85rem' }}>Authentication Notice</strong>
+              <strong style={{ display: 'block', fontSize: '0.85rem', fontFamily: 'Sora, sans-serif' }}>Authentication Notice</strong>
               <span>{errorMessage}</span>
             </div>
           </div>
         )}
 
-        <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', maxWidth: '380px', margin: '0 auto', lineHeight: '1.6' }}>
+        <p style={{ fontSize: '0.92rem', color: 'var(--text-muted)', maxWidth: '420px', margin: '0 auto', lineHeight: '1.65' }}>
           {isAuth
-            ? 'You are currently authenticated with GitHub. You can navigate directly to your dashboard or switch accounts.'
-            : 'Connect your GitHub account to get personalized open-source issue recommendations and step-by-step learning roadmaps.'
+            ? 'You are currently authenticated. Explore your developer intelligence dashboard, AI issue feed, and solution roadmaps.'
+            : 'Connect your GitHub account or explore the instant interactive sandbox to discover tailored issues with step-by-step AI guidance.'
           }
         </p>
 
         {isAuth ? (
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-            <button 
-              onClick={() => navigate('/dashboard')} 
-              className="btn-primary" 
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="btn-primary"
               style={{ width: '100%', padding: '12px', fontSize: '0.88rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', border: 'none' }}
             >
               <UserCheck size={18} />
@@ -96,17 +96,17 @@ export default function Login({ loggedIn = false, setLoggedIn }: LoginProps): Re
             </button>
 
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button 
-                onClick={handleRelogin} 
-                className="btn-secondary" 
+              <button
+                onClick={handleRelogin}
+                className="btn-secondary"
                 style={{ flex: 1, padding: '10px', fontSize: '0.82rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
                 <RefreshCw size={15} />
                 Switch GitHub Account
               </button>
 
-              <button 
-                onClick={handleLogoutClick} 
+              <button
+                onClick={handleLogoutClick}
                 style={{
                   flex: 1,
                   background: 'rgba(239, 68, 68, 0.1)',
@@ -120,7 +120,8 @@ export default function Login({ loggedIn = false, setLoggedIn }: LoginProps): Re
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  fontFamily: 'Plus Jakarta Sans, sans-serif'
                 }}
               >
                 <LogOut size={15} />
@@ -130,13 +131,25 @@ export default function Login({ loggedIn = false, setLoggedIn }: LoginProps): Re
           </div>
         ) : (
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
-            <button 
-              onClick={handleGithubLogin} 
-              className="btn-primary" 
-              style={{ width: '100%', padding: '12px 28px', fontSize: '0.88rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', border: 'none', transition: 'all 0.2s' }}
+            <button
+              onClick={handleGithubLogin}
+              className="btn-primary"
+              style={{ width: '100%', padding: '12px 28px', fontSize: '0.9rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', border: 'none', transition: 'all 0.2s' }}
             >
               <GithubIcon size={18} />
               Continue with GitHub
+            </button>
+
+            <button
+              onClick={() => {
+                localStorage.setItem('token', 'demo-token');
+                if (setLoggedIn) setLoggedIn(true);
+                navigate('/dashboard');
+              }}
+              className="btn-secondary"
+              style={{ width: '100%', padding: '10px 20px', fontSize: '0.85rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              ⚡ Instant Demo Sandbox
             </button>
 
             <button
@@ -148,7 +161,7 @@ export default function Login({ loggedIn = false, setLoggedIn }: LoginProps): Re
           </div>
         )}
 
-        <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', letterSpacing: '0.05em', fontFamily: 'monospace', marginTop: '12px' }}>
+        <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', letterSpacing: '0.08em', fontFamily: 'JetBrains Mono, monospace', marginTop: '12px' }}>
           SECURE OAUTH 2.0 PROTOCOL VIA GITHUB
         </span>
       </div>

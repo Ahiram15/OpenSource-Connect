@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { IssueItem, fetchPRStarter, AIPRStarter, ChatMessage, sendIssueChatMessage } from '../services/api';
-import { Sparkles, Copy, Check, Code2, GitPullRequest, Terminal, CheckSquare, MessageSquare, Send, X } from 'lucide-react';
+import { IssueItem, fetchPRStarter, AIPRStarter } from '../services/api';
+import { Sparkles, Copy, Check, Code2, GitPullRequest, Terminal, CheckSquare, MessageSquare, Send, X, Lightbulb, Eye, Unlock, ArrowRight, Zap, ChevronRight } from 'lucide-react';
 
 export default function IssueDetail(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
@@ -32,148 +32,14 @@ export default function IssueDetail(): React.ReactElement {
   const [roadmap, setRoadmap] = useState(currentIssue.roadmap || []);
   const [mounted, setMounted] = useState<boolean>(false);
   const [prStarter, setPrStarter] = useState<AIPRStarter | null>(null);
+  const [hintLevel, setHintLevel] = useState<number>(0); // 0 = none, 1 = hint 1, 2 = hint 2, 3 = full code
   const [loadingPr, setLoadingPr] = useState<boolean>(false);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [copiedPrBody, setCopiedPrBody] = useState<boolean>(false);
-
-  // AI Issue Copilot Chat States
-  const [chatOpen, setChatOpen] = useState<boolean>(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState<string>('');
-  const [sendingChat, setSendingChat] = useState<boolean>(false);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-
+  const [copiedCmdIdx, setCopiedCmdIdx] = useState<number | null>(null);
   React.useEffect(() => {
     setMounted(true);
   }, []);
-
-  // Auto-scroll to bottom of chat
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, chatOpen]);
-
-  // Send message
-  const handleSendMessage = async (customMessage?: string) => {
-    const textToSend = customMessage || chatInput;
-    if (!textToSend.trim() || sendingChat) return;
-
-    const userMsg: ChatMessage = { role: 'user', text: textToSend };
-    setMessages(prev => [...prev, userMsg]);
-    if (!customMessage) setChatInput('');
-    setSendingChat(true);
-
-    try {
-      const response = await sendIssueChatMessage(
-        currentIssue.id,
-        currentIssue.title,
-        currentIssue.explanation || '',
-        messages,
-        textToSend
-      );
-      const assistantMsg: ChatMessage = { role: 'model', text: response.reply };
-      setMessages(prev => [...prev, assistantMsg]);
-    } catch (err) {
-      console.error(err);
-      const errorMsg: ChatMessage = {
-        role: 'model',
-        text: 'Sorry, I encountered an issue connecting to the Gemini server. Please check that the server is running and try again.'
-      };
-      setMessages(prev => [...prev, errorMsg]);
-    } finally {
-      setSendingChat(false);
-    }
-  };
-
-  const suggestionChips = [
-    { text: '🛠️ Setup Guide', message: 'How do I run and test this repository locally?' },
-    { text: '🔍 File Locations', message: 'Which files should I edit to solve this issue?' },
-    { text: '✏️ Code Fix Draft', message: 'Can you show me a typescript code snippet for the fix?' },
-  ];
-
-  const renderMessageContent = (text: string) => {
-    const lines = text.split('\n');
-    let inCodeBlock = false;
-    let codeContent: string[] = [];
-
-    return lines.map((line, idx) => {
-      if (line.trim().startsWith('```')) {
-        if (inCodeBlock) {
-          inCodeBlock = false;
-          const code = codeContent.join('\n');
-          codeContent = [];
-          return (
-            <pre key={idx} style={{
-              background: '#07090e',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '6px',
-              padding: '12px',
-              fontSize: '0.8rem',
-              fontFamily: 'monospace',
-              color: '#a5b4fc',
-              overflowX: 'auto',
-              margin: '8px 0',
-              whiteSpace: 'pre-wrap'
-            }}>
-              <code>{code}</code>
-            </pre>
-          );
-        } else {
-          inCodeBlock = true;
-          return null;
-        }
-      }
-
-      if (inCodeBlock) {
-        codeContent.push(line);
-        return null;
-      }
-
-      if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
-        return (
-          <li key={idx} style={{ marginLeft: '16px', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '4px' }}>
-            {line.trim().substring(2)}
-          </li>
-        );
-      }
-
-      const numMatch = line.trim().match(/^(\d+)\.\s(.*)/);
-      if (numMatch) {
-        return (
-          <li key={idx} style={{ marginLeft: '16px', listStyleType: 'decimal', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '4px' }}>
-            {numMatch[2]}
-          </li>
-        );
-      }
-
-      const parts = line.split(/(`[^`]+`)/g);
-      const lineContent = parts.map((part, pIdx) => {
-        if (part.startsWith('`') && part.endsWith('`')) {
-          return (
-            <code key={pIdx} style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '4px',
-              padding: '2px 6px',
-              fontSize: '0.78rem',
-              fontFamily: 'monospace',
-              color: '#f43f5e'
-            }}>
-              {part.substring(1, part.length - 1)}
-            </code>
-          );
-        }
-        return part;
-      });
-
-      return (
-        <p key={idx} style={{ margin: '4px 0', fontSize: '0.85rem', lineHeight: '1.4', color: 'var(--text-muted)' }}>
-          {lineContent}
-        </p>
-      );
-    }).filter(Boolean);
-  };
 
   const toggleStep = (index: number): void => {
     const updated = [...roadmap];
@@ -181,7 +47,11 @@ export default function IssueDetail(): React.ReactElement {
     setRoadmap(updated);
   };
 
-  const handleGeneratePRStarter = async (): Promise<void> => {
+  const handleGeneratePRStarter = async (targetLevel: number = 1): Promise<void> => {
+    if (prStarter) {
+      setHintLevel(targetLevel);
+      return;
+    }
     setLoadingPr(true);
     try {
       const techStack = [
@@ -194,6 +64,7 @@ export default function IssueDetail(): React.ReactElement {
       const issueDetails = `${currentIssue.explanation} - ${currentIssue.knowledgeGaps.join(', ')}`;
       const data = await fetchPRStarter(currentIssue.title, issueDetails, techStack);
       setPrStarter(data);
+      setHintLevel(targetLevel);
     } catch (err) {
       console.error('Failed to generate PR starter:', err);
     } finally {
@@ -240,9 +111,9 @@ ${prStarter.prChecklist.map(item => `- [x] ${item}`).join('\n')}
 
   return (
     <div className="animate-fade-in" style={{ maxWidth: '850px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '36px', padding: '16px 8px' }}>
-      
+
       {/* Back Link */}
-      <button 
+      <button
         onClick={() => navigate('/issues')}
         className="btn-secondary"
         style={{ width: 'fit-content', padding: '8px 16px', fontSize: '0.8rem', borderRadius: '6px' }}
@@ -254,7 +125,7 @@ ${prStarter.prChecklist.map(item => `- [x] ${item}`).join('\n')}
       <div className="glass-panel" style={{ padding: '32px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <a 
+            <a
               href={`https://github.com/${currentIssue.repository}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -264,7 +135,7 @@ ${prStarter.prChecklist.map(item => `- [x] ${item}`).join('\n')}
               {currentIssue.repository} ↗
             </a>
             <h1 style={{ fontSize: '1.25rem', fontWeight: 650, margin: '8px 0 0 0', color: '#ffffff', letterSpacing: '-0.015em' }}>
-              <a 
+              <a
                 href={githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -276,17 +147,18 @@ ${prStarter.prChecklist.map(item => `- [x] ${item}`).join('\n')}
           </div>
 
           <div style={{
-            width: '42px',
-            height: '42px',
+            width: '46px',
+            height: '46px',
             borderRadius: '50%',
-            border: '1px solid rgba(16, 185, 129, 0.15)',
-            background: 'rgba(16, 185, 129, 0.05)',
-            color: '#10b981',
+            border: '2px solid #FFF4B7',
+            background: 'rgba(0, 106, 103, 0.35)',
+            color: '#FFF4B7',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontWeight: 700,
-            fontSize: '0.82rem'
+            fontWeight: 800,
+            fontSize: '0.88rem',
+            boxShadow: '0 0 14px rgba(255, 244, 183, 0.3)'
           }}>
             {currentIssue.matchScore}%
           </div>
@@ -294,7 +166,7 @@ ${prStarter.prChecklist.map(item => `- [x] ${item}`).join('\n')}
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '24px', flexWrap: 'wrap' }}>
-          <a 
+          <a
             href={githubUrl}
             target="_blank"
             rel="noopener noreferrer"
@@ -304,7 +176,7 @@ ${prStarter.prChecklist.map(item => `- [x] ${item}`).join('\n')}
             Open Original Issue ↗
           </a>
 
-          <button 
+          <button
             onClick={openCodespaces}
             className="btn-secondary"
             style={{ padding: '10px 18px', fontSize: '0.8rem', borderRadius: '6px' }}
@@ -316,7 +188,7 @@ ${prStarter.prChecklist.map(item => `- [x] ${item}`).join('\n')}
 
       {/* AI Match Rationale & Knowledge Gaps */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px' }}>
-        
+
         {/* Rationale */}
         <div className="glass-panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -355,54 +227,337 @@ ${prStarter.prChecklist.map(item => `- [x] ${item}`).join('\n')}
         </div>
       </div>
 
-      {/* ─── AI PR Starter & Code Assistant Card ──────────────────────── */}
+      {/* ─── Guided Solution Lab: Hints First ➔ Full Code ──────────────── */}
       <div className="glass-panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
-              <Sparkles size={18} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #006A67 0%, #FFF4B7 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 0 16px rgba(0, 106, 103, 0.5)'
+            }}>
+              <Lightbulb size={20} color="#020B34" />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
-                AI PR Starter & Code Assistant
-              </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', margin: '2px 0 0 0' }}>
-                Generate starter code, solution outline, and copyable PR description
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                  Guided Solution Lab
+                </h3>
+                <span style={{ fontSize: '0.68rem', background: 'rgba(0, 106, 103, 0.35)', color: '#FFF4B7', border: '1px solid rgba(255, 244, 183, 0.4)', padding: '2px 8px', borderRadius: '10px', fontWeight: 700 }}>
+                  AI MENTOR
+                </span>
+              </div>
+              <p style={{ fontSize: '0.82rem', color: '#cbd5e1', margin: '3px 0 0 0' }}>
+                Get progressive clues to solve the issue yourself, or reveal the complete working code
               </p>
             </div>
           </div>
 
-          <button
-            onClick={handleGeneratePRStarter}
-            disabled={loadingPr}
-            className="btn-primary"
-            style={{
-              padding: '10px 18px',
-              fontSize: '0.82rem',
-              borderRadius: '8px',
-              cursor: loadingPr ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              opacity: loadingPr ? 0.7 : 1
-            }}
-          >
-            {loadingPr ? (
-              <>
-                <span className="spinner" style={{ width: '14px', height: '14px', border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
-                Generating PR Blueprint...
-              </>
-            ) : (
-              <>
-                <GitPullRequest size={16} />
-                {prStarter ? 'Regenerate PR Blueprint' : 'Generate AI PR Blueprint'}
-              </>
-            )}
-          </button>
+          {/* Action Choice Buttons */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => handleGeneratePRStarter(1)}
+              disabled={loadingPr}
+              className="btn-primary"
+              style={{
+                padding: '10px 18px',
+                fontSize: '0.83rem',
+                borderRadius: '8px',
+                cursor: loadingPr ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                opacity: loadingPr ? 0.7 : 1
+              }}
+            >
+              {loadingPr && hintLevel !== 3 ? (
+                <>
+                  <span className="spinner" style={{ width: '14px', height: '14px', border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+                  Analyzing Clues...
+                </>
+              ) : (
+                <>
+                  <Lightbulb size={16} />
+                  {hintLevel > 0 && hintLevel < 3 ? 'Review Hints' : '💡 Give Hints First'}
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={() => handleGeneratePRStarter(3)}
+              disabled={loadingPr}
+              className="btn-secondary"
+              style={{
+                padding: '10px 18px',
+                fontSize: '0.83rem',
+                borderRadius: '8px',
+                cursor: loadingPr ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                borderColor: hintLevel === 3 ? 'var(--primary)' : 'rgba(255,255,255,0.12)'
+              }}
+            >
+              {loadingPr && hintLevel === 3 ? (
+                <>
+                  <span className="spinner" style={{ width: '14px', height: '14px', border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+                  Generating Code...
+                </>
+              ) : (
+                <>
+                  <Code2 size={16} color="#38bdf8" />
+                  ⚡ Reveal Whole Code
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
-        {prStarter && (
-          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '10px' }}>
+        {/* PROGRESS STEPPER (Level 1 ➔ Level 2 ➔ Level 3) */}
+        {hintLevel > 0 && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+            borderRadius: '12px',
+            padding: '12px 18px',
+            marginTop: '6px',
+            flexWrap: 'wrap',
+            gap: '10px'
+          }}>
+            <div
+              onClick={() => setHintLevel(1)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                color: hintLevel >= 1 ? '#818cf8' : 'var(--text-dim)',
+                fontWeight: hintLevel === 1 ? 700 : 500,
+                fontSize: '0.83rem'
+              }}
+            >
+              <span style={{
+                width: '22px',
+                height: '22px',
+                borderRadius: '50%',
+                background: hintLevel >= 1 ? '#6366f1' : 'rgba(255,255,255,0.06)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.72rem',
+                fontWeight: 700
+              }}>
+                1
+              </span>
+              Hint 1: Where to Look
+            </div>
+
+            <ChevronRight size={16} color="rgba(255,255,255,0.2)" />
+
+            <div
+              onClick={() => setHintLevel(2)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                color: hintLevel >= 2 ? '#38bdf8' : 'var(--text-dim)',
+                fontWeight: hintLevel === 2 ? 700 : 500,
+                fontSize: '0.83rem'
+              }}
+            >
+              <span style={{
+                width: '22px',
+                height: '22px',
+                borderRadius: '50%',
+                background: hintLevel >= 2 ? '#0284c7' : 'rgba(255,255,255,0.06)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.72rem',
+                fontWeight: 700
+              }}>
+                2
+              </span>
+              Hint 2: Logic & Algorithm
+            </div>
+
+            <ChevronRight size={16} color="rgba(255,255,255,0.2)" />
+
+            <div
+              onClick={() => setHintLevel(3)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                color: hintLevel === 3 ? '#34d399' : 'var(--text-dim)',
+                fontWeight: hintLevel === 3 ? 700 : 500,
+                fontSize: '0.83rem'
+              }}
+            >
+              <span style={{
+                width: '22px',
+                height: '22px',
+                borderRadius: '50%',
+                background: hintLevel === 3 ? '#059669' : 'rgba(255,255,255,0.06)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.72rem',
+                fontWeight: 700
+              }}>
+                3
+              </span>
+              Complete Code Solution
+            </div>
+          </div>
+        )}
+
+        {/* ─── STAGE 1: HINT 1 (WHERE TO LOOK) ─────────────────────────── */}
+        {hintLevel === 1 && prStarter && (
+          <div className="animate-fade-in" style={{
+            background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(56,189,248,0.04) 100%)',
+            border: '1px solid rgba(99,102,241,0.3)',
+            borderRadius: '12px',
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.3rem' }}>💡</span>
+              <div>
+                <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+                  Hint 1: Architectural Location & Clues
+                </h4>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)', margin: '2px 0 0 0' }}>
+                  Read this clue to locate the bug in the repository before looking at the code
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              background: 'rgba(7, 9, 14, 0.6)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              borderRadius: '10px',
+              padding: '16px 20px',
+              fontSize: '0.88rem',
+              lineHeight: 1.6,
+              color: '#e2e8f0'
+            }}>
+              {prStarter.hint1 || `Look at the repository's core logic handling ${currentIssue.knowledgeGaps[0] || 'lifecycle events'}. Notice where events or state updates are triggered without a corresponding cleanup.`}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', paddingTop: '8px' }}>
+              <button
+                onClick={() => setHintLevel(3)}
+                className="btn-secondary"
+                style={{ fontSize: '0.78rem', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Zap size={14} color="#fbbf24" />
+                Skip to Full Code
+              </button>
+
+              <button
+                onClick={() => setHintLevel(2)}
+                className="btn-primary"
+                style={{ fontSize: '0.82rem', padding: '9px 18px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                Next: Reveal Logic Hint
+                <ArrowRight size={15} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ─── STAGE 2: HINT 2 (LOGIC & ALGORITHM) ─────────────────────── */}
+        {hintLevel === 2 && prStarter && (
+          <div className="animate-fade-in" style={{
+            background: 'linear-gradient(135deg, rgba(2,132,199,0.08) 0%, rgba(99,102,241,0.04) 100%)',
+            border: '1px solid rgba(56,189,248,0.3)',
+            borderRadius: '12px',
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.3rem' }}>🔍</span>
+              <div>
+                <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+                  Hint 2: Algorithm & Logic Steps
+                </h4>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)', margin: '2px 0 0 0' }}>
+                  The step-by-step logic required to solve the issue
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              background: 'rgba(7, 9, 14, 0.6)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              borderRadius: '10px',
+              padding: '16px 20px',
+              fontSize: '0.88rem',
+              lineHeight: 1.6,
+              color: '#e2e8f0'
+            }}>
+              {prStarter.hint2 || 'Ensure that any async listeners or memory hooks check for component unmount state and gracefully dispose of active references.'}
+            </div>
+
+            {/* Implementation Outline */}
+            <div style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '10px', padding: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <Terminal size={15} color="#38bdf8" />
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc' }}>Execution Outline</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {prStarter.implementationOutline.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    <span style={{ color: '#38bdf8', fontWeight: 700, fontFamily: 'monospace' }}>{idx + 1}.</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', paddingTop: '8px' }}>
+              <button
+                onClick={() => setHintLevel(1)}
+                className="btn-secondary"
+                style={{ fontSize: '0.78rem', padding: '8px 14px' }}
+              >
+                ← Back to Hint 1
+              </button>
+
+              <button
+                onClick={() => setHintLevel(3)}
+                className="btn-primary"
+                style={{ fontSize: '0.82rem', padding: '9px 20px', display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)' }}
+              >
+                <Unlock size={15} />
+                🔓 Reveal Full Code Solution
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ─── STAGE 3: FULL CODE SOLUTION (WHOLE CODE) ───────────────── */}
+        {hintLevel === 3 && prStarter && (
+          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '6px' }}>
+
             {/* PR Title Banner */}
             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '10px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
@@ -422,6 +577,27 @@ ${prStarter.prChecklist.map(item => `- [x] ${item}`).join('\n')}
               </button>
             </div>
 
+            {/* Code Draft Block */}
+            <div style={{ background: 'rgba(7, 9, 14, 0.95)', border: '1px solid rgba(52, 211, 153, 0.25)', borderRadius: '10px', overflow: 'hidden' }}>
+              <div style={{ padding: '12px 18px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#34d399', fontWeight: 700, fontFamily: 'monospace' }}>
+                  <Code2 size={16} color="#34d399" />
+                  Full Working Code Solution
+                </div>
+                <button
+                  onClick={copyCodeDraft}
+                  className="btn-secondary"
+                  style={{ padding: '6px 12px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  {copiedCode ? <Check size={13} color="#34d399" /> : <Copy size={13} />}
+                  {copiedCode ? 'Copied Code!' : 'Copy Full Code'}
+                </button>
+              </div>
+              <pre style={{ margin: 0, padding: '20px', fontSize: '0.84rem', fontFamily: 'monospace', color: '#a5b4fc', overflowX: 'auto', lineHeight: 1.6 }}>
+                <code>{prStarter.codeDraft}</code>
+              </pre>
+            </div>
+
             {/* Implementation Outline */}
             <div style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '10px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
@@ -436,26 +612,6 @@ ${prStarter.prChecklist.map(item => `- [x] ${item}`).join('\n')}
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Code Draft Block */}
-            <div style={{ background: 'rgba(7, 9, 14, 0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', overflow: 'hidden' }}>
-              <div style={{ padding: '10px 16px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                  <Code2 size={15} color="#34d399" />
-                  Starter Code Snippet
-                </div>
-                <button
-                  onClick={copyCodeDraft}
-                  style={{ background: 'transparent', border: 'none', color: copiedCode ? '#34d399' : 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'monospace' }}
-                >
-                  {copiedCode ? <Check size={13} /> : <Copy size={13} />}
-                  {copiedCode ? 'Copied Code!' : 'Copy Code'}
-                </button>
-              </div>
-              <pre style={{ margin: 0, padding: '18px 20px', fontSize: '0.82rem', fontFamily: 'monospace', color: '#a5b4fc', overflowX: 'auto', lineHeight: 1.5 }}>
-                <code>{prStarter.codeDraft}</code>
-              </pre>
             </div>
 
             {/* Pre-flight PR Checklist */}
@@ -473,341 +629,149 @@ ${prStarter.prChecklist.map(item => `- [x] ${item}`).join('\n')}
                 ))}
               </div>
             </div>
+
+            {/* Restart Stepper Link */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setHintLevel(1)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-dim)',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                ↺ Review Step-by-Step Hints Again
+              </button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Interactive Step-by-Step Learning Roadmap Checklist */}
-      <div className="glass-panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        
-        {/* Progress Header */}
+      {/* ─── 1-Click Git Contribution Terminal Workflow ────────────────── */}
+      <div className="glass-panel" style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 650, color: '#ffffff', margin: 0 }}>
-              Interactive Learning Roadmap
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', margin: '4px 0 0 0' }}>
-              Bridge your knowledge gaps by completing steps sequentially
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'rgba(56,189,248,0.12)',
+              border: '1px solid rgba(56,189,248,0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#38bdf8'
+            }}>
+              <Terminal size={20} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                Git & Terminal Contribution Workflow
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', margin: '2px 0 0 0' }}>
+                Copy-pasteable terminal commands to clone, branch, test, and commit your fix
+              </p>
+            </div>
           </div>
-          <span style={{ fontSize: '0.78rem', fontFamily: 'monospace', color: 'var(--text-muted)', backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.04)', padding: '6px 12px', borderRadius: '6px' }}>
-            {completedSteps} / {totalSteps} Steps • {progressPercent}%
-          </span>
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={openCodespaces}
+              className="btn-secondary"
+              style={{ fontSize: '0.78rem', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              🚀 Open in Codespaces
+            </button>
+            <a
+              href={githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary"
+              style={{ fontSize: '0.78rem', padding: '8px 14px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              🔗 View on GitHub
+            </a>
+          </div>
         </div>
 
-        {/* Slim progress bar track */}
-        <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '3px', overflow: 'hidden' }}>
-          <div 
-            style={{ 
-              height: '100%', 
-              width: mounted ? `${progressPercent}%` : '0%', 
-              background: 'linear-gradient(90deg, #6366f1 0%, #10b981 100%)',
-              borderRadius: '3px',
-              transition: 'width 1s cubic-bezier(0.16, 1, 0.3, 1)'
-            }} 
-          />
-        </div>
-
-        {/* Checklist Steps */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {roadmap.map((item, index: number) => (
-            <label 
-              key={item.step}
+        {/* Terminal Command Steps */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {[
+            {
+              step: '1. Clone & Enter Repository',
+              cmd: `git clone https://github.com/${currentIssue.repository}.git && cd ${currentIssue.repository.split('/')[1] || 'repo'}`,
+              desc: 'Clone the target project to your local workstation'
+            },
+            {
+              step: '2. Create Isolated Feature Branch',
+              cmd: `git checkout -b fix/${currentIssue.id.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`,
+              desc: 'Never commit directly to main; create a dedicated branch'
+            },
+            {
+              step: '3. Install Dependencies & Run Tests',
+              cmd: 'npm install && npm test',
+              desc: 'Verify the test suite passes before making your changes'
+            },
+            {
+              step: '4. Stage, Commit & Push Upstream',
+              cmd: `git add . && git commit -m "${prStarter?.prTitle || 'fix: resolve ' + currentIssue.title.toLowerCase()}" && git push origin fix/${currentIssue.id.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`,
+              desc: 'Commit with Conventional Commit format and push to your remote'
+            }
+          ].map((item, idx) => (
+            <div
+              key={idx}
               style={{
+                background: 'rgba(7, 9, 14, 0.7)',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                borderRadius: '10px',
+                padding: '14px 18px',
                 display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                padding: '18px 24px',
-                borderRadius: '8px',
-                border: item.completed ? '1px solid rgba(16, 185, 129, 0.15)' : '1px solid rgba(255,255,255,0.03)',
-                backgroundColor: item.completed ? 'rgba(16, 185, 129, 0.02)' : 'rgba(255,255,255,0.01)',
-                cursor: 'pointer',
-                transition: 'all 0.25s'
+                flexDirection: 'column',
+                gap: '8px'
               }}
             >
-              <input 
-                type="checkbox"
-                checked={item.completed}
-                onChange={() => toggleStep(index)}
-                style={{ display: 'none' }}
-              />
-              
-              {/* Custom Checkbox indicator */}
-              <div style={{
-                width: '18px',
-                height: '18px',
-                borderRadius: '50%',
-                border: item.completed ? '1.5px solid #10b981' : '1.5px solid rgba(255,255,255,0.2)',
-                backgroundColor: item.completed ? '#10b981' : 'transparent',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s',
-                flexShrink: 0
-              }}>
-                {item.completed && (
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ffffff' }} />
-                )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#818cf8', fontFamily: 'monospace' }}>
+                  {item.step}
+                </span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                  {item.desc}
+                </span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.68rem', fontFamily: 'monospace', fontWeight: 600, color: item.completed ? '#10b981' : '#818cf8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Step {item.step}
-                </span>
-                <p style={{ 
-                  fontSize: '0.88rem', 
-                  fontWeight: 600,
-                  margin: 0, 
-                  textDecoration: item.completed ? 'line-through' : 'none',
-                  color: item.completed ? 'var(--text-dim)' : 'var(--text-main)',
-                  lineHeight: '1.4'
-                }}>
-                  {item.task}
-                </p>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'rgba(0, 0, 0, 0.4)',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.04)',
+                gap: '12px'
+              }}>
+                <code style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: '#a5b4fc', wordBreak: 'break-all' }}>
+                  $ {item.cmd}
+                </code>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(item.cmd);
+                    setCopiedCmdIdx(idx);
+                    setTimeout(() => setCopiedCmdIdx(null), 2000);
+                  }}
+                  className="btn-secondary"
+                  style={{ padding: '4px 10px', fontSize: '0.72rem', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  {copiedCmdIdx === idx ? <Check size={12} color="#34d399" /> : <Copy size={12} />}
+                  {copiedCmdIdx === idx ? 'Copied!' : 'Copy'}
+                </button>
               </div>
-            </label>
+            </div>
           ))}
         </div>
       </div>
-
-      <style>{`
-        @keyframes bounce {
-          0%, 80%, 100% { transform: scale(0); }
-          40% { transform: scale(1.0); }
-        }
-      `}</style>
-
-      {/* Floating Chat Button */}
-      {!chatOpen && (
-        <button
-          onClick={() => {
-            setChatOpen(true);
-            if (messages.length === 0) {
-              setMessages([
-                { role: 'model', text: `Hi! I am your AI Copilot for "${currentIssue.title}". How can I help you implement or debug this issue?` }
-              ]);
-            }
-          }}
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            zIndex: 1000,
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-            boxShadow: '0 8px 30px rgba(99, 102, 241, 0.4)',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#ffffff',
-            transition: 'transform 0.2s',
-            WebkitTransition: 'transform 0.2s'
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
-          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-        >
-          <MessageSquare size={24} />
-        </button>
-      )}
-
-      {/* Collapsible Chat Panel */}
-      {chatOpen && (
-        <div style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          zIndex: 1000,
-          width: '380px',
-          height: '520px',
-          display: 'flex',
-          flexDirection: 'column',
-          borderRadius: '16px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          background: 'rgba(15, 23, 42, 0.95)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.5)',
-          overflow: 'hidden'
-        }}>
-          {/* Header */}
-          <div style={{
-            padding: '16px 20px',
-            background: 'linear-gradient(90deg, rgba(99,102,241,0.15) 0%, rgba(79,70,229,0.15) 100%)',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sparkles size={16} color="#818cf8" />
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>AI Issue Copilot</div>
-                <div style={{ fontSize: '0.65rem', color: '#10b981' }}>Active mentor</div>
-              </div>
-            </div>
-            <button 
-              onClick={() => setChatOpen(false)}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* Messages Container */}
-          <div style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px'
-          }}>
-            {messages.map((msg, idx) => (
-              <div 
-                key={idx} 
-                style={{
-                  display: 'flex',
-                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
-                }}
-              >
-                <div style={{
-                  maxWidth: '85%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  borderTopRightRadius: msg.role === 'user' ? '2px' : '12px',
-                  borderTopLeftRadius: msg.role === 'user' ? '12px' : '2px',
-                  background: msg.role === 'user' ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'rgba(255,255,255,0.03)',
-                  border: msg.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                  color: '#f8fafc',
-                  wordBreak: 'break-word',
-                  textAlign: 'left'
-                }}>
-                  {msg.role === 'user' ? (
-                    <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: '1.4' }}>{msg.text}</p>
-                  ) : (
-                    renderMessageContent(msg.text)
-                  )}
-                </div>
-              </div>
-            ))}
-            
-            {sendingChat && (
-              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                <div style={{
-                  maxWidth: '85%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <span className="typing-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--text-muted)', display: 'inline-block', animation: 'bounce 1.4s infinite ease-in-out' }} />
-                  <span className="typing-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--text-muted)', display: 'inline-block', animation: 'bounce 1.4s infinite ease-in-out 0.2s' }} />
-                  <span className="typing-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--text-muted)', display: 'inline-block', animation: 'bounce 1.4s infinite ease-in-out 0.4s' }} />
-                </div>
-              </div>
-            )}
-            
-            {/* Suggestion Chips */}
-            {messages.length === 1 && !sendingChat && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', textAlign: 'left' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Suggested questions</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {suggestionChips.map((chip, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSendMessage(chip.message)}
-                      style={{
-                        padding: '10px 14px',
-                        background: 'rgba(99,102,241,0.05)',
-                        border: '1px solid rgba(99,102,241,0.15)',
-                        borderRadius: '8px',
-                        color: '#818cf8',
-                        fontSize: '0.75rem',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(99,102,241,0.1)';
-                        e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(99,102,241,0.05)';
-                        e.currentTarget.style.borderColor = 'rgba(99,102,241,0.15)';
-                      }}
-                    >
-                      {chip.text}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input Footer */}
-          <form 
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSendMessage();
-            }}
-            style={{
-              padding: '16px',
-              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-              background: 'rgba(7, 9, 14, 0.6)',
-              display: 'flex',
-              gap: '8px'
-            }}
-          >
-            <input 
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Ask Copilot..."
-              style={{
-                flex: 1,
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '8px',
-                padding: '10px 14px',
-                fontSize: '0.8rem',
-                color: '#ffffff',
-                outline: 'none',
-                transition: 'border-color 0.2s'
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)')}
-              onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)')}
-            />
-            <button
-              type="submit"
-              disabled={!chatInput.trim() || sendingChat}
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: chatInput.trim() && !sendingChat ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.05)',
-                color: chatInput.trim() && !sendingChat ? '#ffffff' : 'var(--text-dim)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: chatInput.trim() && !sendingChat ? 'pointer' : 'not-allowed',
-                transition: 'all 0.2s'
-              }}
-            >
-              <Send size={16} />
-            </button>
-          </form>
-        </div>
-      )}
-
     </div>
   );
 }

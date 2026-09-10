@@ -1,0 +1,505 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+import { MessageSquare, Send, X, Sparkles, Minimize2, Copy, Check } from 'lucide-react';
+import { ChatMessage, sendIssueChatMessage } from '../services/api';
+
+export default function GlobalChatCopilot(): React.ReactElement {
+  const location = useLocation();
+  const [chatOpen, setChatOpen] = useState<boolean>(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState<string>('');
+  const [sendingChat, setSendingChat] = useState<boolean>(false);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Check if we are on an issue details page
+  const isIssuePage = location.pathname.startsWith('/issues/') && location.pathname !== '/issues';
+  const issueIdFromUrl = isIssuePage ? location.pathname.split('/issues/')[1] : 'general';
+
+  // Initial welcome message on first open
+  useEffect(() => {
+    if (chatOpen && messages.length === 0) {
+      if (isIssuePage) {
+        setMessages([
+          {
+            role: 'model',
+            text: '👋 Hi! I am your **AI Issue Copilot**. Ask me anything about locating the relevant files, debugging algorithms, setting up tests, or preparing your Pull Request.'
+          }
+        ]);
+      } else {
+        setMessages([
+          {
+            role: 'model',
+            text: '👋 Hi! I am your **OpenSource Connect AI Copilot**. I can help you discover good first issues, navigate GitHub contribution workflows, or explain project architectures. What are you working on?'
+          }
+        ]);
+      }
+    }
+  }, [chatOpen, isIssuePage, messages.length]);
+
+  // Auto-scroll to bottom of chat
+  useEffect(() => {
+    if (messagesEndRef.current && chatOpen) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, chatOpen, sendingChat]);
+
+  const handleSendMessage = async (customMessage?: string) => {
+    const textToSend = customMessage || chatInput;
+    if (!textToSend.trim() || sendingChat) return;
+
+    const userMsg: ChatMessage = { role: 'user', text: textToSend };
+    setMessages((prev) => [...prev, userMsg]);
+    if (!customMessage) setChatInput('');
+    setSendingChat(true);
+
+    try {
+      const response = await sendIssueChatMessage(
+        issueIdFromUrl,
+        isIssuePage ? `Issue Context (${issueIdFromUrl})` : 'General Open Source Assistance',
+        isIssuePage ? 'Help the user with this issue' : 'General development assistance',
+        messages,
+        textToSend
+      );
+
+      const assistantMsg: ChatMessage = { role: 'model', text: response.reply };
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch (err) {
+      console.error(err);
+      const errorMsg: ChatMessage = {
+        role: 'model',
+        text: 'I am temporarily unable to reach the Gemini server. Please ensure the backend is running and try again.'
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setSendingChat(false);
+    }
+  };
+
+  const handleCopyCode = (code: string, idx: number) => {
+    navigator.clipboard.writeText(code);
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 2000);
+  };
+
+  const renderMessageContent = (content: string) => {
+    const lines = content.split('\n');
+    let inCodeBlock = false;
+    let codeContent: string[] = [];
+
+    return lines.map((line, idx) => {
+      if (line.trim().startsWith('```')) {
+        if (inCodeBlock) {
+          inCodeBlock = false;
+          const code = codeContent.join('\n');
+          codeContent = [];
+          return (
+            <div key={idx} style={{ position: 'relative', margin: '10px 0' }}>
+              <button
+                type="button"
+                onClick={() => handleCopyCode(code, idx)}
+                style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '8px',
+                  background: 'rgba(255, 244, 183, 0.15)',
+                  border: '1px solid rgba(255, 244, 183, 0.3)',
+                  borderRadius: '6px',
+                  padding: '4px 8px',
+                  color: '#FFF4B7',
+                  fontSize: '0.7rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  zIndex: 2
+                }}
+              >
+                {copiedIdx === idx ? <Check size={12} color="#34d399" /> : <Copy size={12} />}
+                {copiedIdx === idx ? 'Copied' : 'Copy'}
+              </button>
+              <pre style={{
+                background: '#010207',
+                border: '1px solid rgba(0, 106, 103, 0.35)',
+                borderRadius: '8px',
+                padding: '12px 14px',
+                fontSize: '0.78rem',
+                fontFamily: 'JetBrains Mono, monospace',
+                color: '#f8fafc',
+                overflowX: 'auto',
+                whiteSpace: 'pre-wrap',
+                margin: 0
+              }}>
+                <code>{code}</code>
+              </pre>
+            </div>
+          );
+        } else {
+          inCodeBlock = true;
+          return null;
+        }
+      }
+
+      if (inCodeBlock) {
+        codeContent.push(line);
+        return null;
+      }
+
+      if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+        return (
+          <li key={idx} style={{ marginLeft: '16px', fontSize: '0.84rem', color: '#cbd5e1', lineHeight: '1.5', marginBottom: '3px' }}>
+            {line.trim().substring(2)}
+          </li>
+        );
+      }
+
+      if (line.trim().startsWith('1. ') || line.trim().startsWith('2. ') || line.trim().startsWith('3. ')) {
+        return (
+          <div key={idx} style={{ fontSize: '0.84rem', color: '#f1f5f9', lineHeight: '1.5', marginBottom: '4px', fontWeight: 600 }}>
+            {line.trim()}
+          </div>
+        );
+      }
+
+      return (
+        <p key={idx} style={{ margin: '0 0 6px 0', fontSize: '0.84rem', lineHeight: '1.5', color: '#cbd5e1' }}>
+          {line}
+        </p>
+      );
+    });
+  };
+
+  const suggestionChips = isIssuePage
+    ? [
+        { text: '🧭 Where should I start?', message: 'Where should I look in the codebase to start fixing this issue?' },
+        { text: '📐 Explain architecture', message: 'Can you explain the high-level architecture and how this feature works?' },
+        { text: '🧪 How do I test this?', message: 'What test commands or test cases should I run to verify my fix?' }
+      ]
+    : [
+        { text: '🚀 How to pick good first issues?', message: 'How do I choose the best first issue based on my skills?' },
+        { text: '🌿 Git Pull Request Workflow', message: 'What is the step-by-step Git workflow to submit my first open source PR?' },
+        { text: '⚡ Explain Match Scores', message: 'How does OpenSource Connect calculate repository match accuracy?' }
+      ];
+
+  return (
+    <>
+      {/* ─── Circular Floating Chat Button (Right Down Corner) ───────────── */}
+      {!chatOpen && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 99999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          <button
+            onClick={() => setChatOpen(true)}
+            aria-label="Open AI Copilot Chat"
+            title="Open AI Copilot Chat (Ask anything)"
+            style={{
+              width: '58px',
+              height: '58px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #006A67 0%, #004d4a 100%)',
+              boxShadow: '0 8px 32px rgba(0, 106, 103, 0.45), 0 0 20px rgba(255, 244, 183, 0.25)',
+              border: '2px solid rgba(255, 244, 183, 0.7)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#FFF4B7',
+              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+              position: 'relative'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.1)';
+              e.currentTarget.style.boxShadow = '0 10px 40px rgba(0, 106, 103, 0.65), 0 0 24px rgba(255, 244, 183, 0.5)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 106, 103, 0.45), 0 0 20px rgba(255, 244, 183, 0.25)';
+            }}
+          >
+            <MessageSquare size={26} color="#FFF4B7" />
+            
+            {/* Live pulsing online badge */}
+            <span style={{
+              position: 'absolute',
+              top: '2px',
+              right: '2px',
+              width: '14px',
+              height: '14px',
+              borderRadius: '50%',
+              background: '#34d399',
+              border: '2.5px solid #004d4a',
+              boxShadow: '0 0 8px #34d399'
+            }} />
+          </button>
+        </div>
+      )}
+
+      {/* ─── Collapsible Chat Panel (Anchored in Right Down Corner) ───────── */}
+      {chatOpen && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 99999,
+          width: '390px',
+          maxWidth: 'calc(100vw - 32px)',
+          height: '540px',
+          maxHeight: 'calc(100vh - 48px)',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: '18px',
+          border: '1px solid rgba(0, 106, 103, 0.45)',
+          background: 'rgba(4, 8, 20, 0.97)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.95), 0 0 25px rgba(0, 106, 103, 0.25)',
+          overflow: 'hidden',
+          fontFamily: 'Plus Jakarta Sans, sans-serif',
+          animation: 'fadeIn 0.25s ease-out'
+        }}>
+          {/* Header */}
+          <div style={{
+            padding: '16px 20px',
+            background: 'rgba(2, 5, 14, 0.98)',
+            borderBottom: '1px solid rgba(0, 106, 103, 0.35)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: 'rgba(0, 106, 103, 0.3)',
+                border: '1px solid rgba(255, 244, 183, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Sparkles size={16} color="#FFF4B7" />
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f8fafc', fontFamily: 'Sora, sans-serif' }}>
+                  AI Issue Copilot
+                </div>
+                <div style={{ fontSize: '0.68rem', color: '#FFF4B7', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399', display: 'inline-block' }} />
+                  {isIssuePage ? 'Issue Context Active' : 'Online Mentor'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button
+                onClick={() => setChatOpen(false)}
+                title="Minimize Chat"
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '6px',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: '5px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Minimize2 size={15} />
+              </button>
+              <button
+                onClick={() => setChatOpen(false)}
+                title="Close Chat"
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '6px',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: '5px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+
+          {/* Messages Container */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '18px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px'
+          }}>
+            {messages.map((msg, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: 'flex',
+                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
+                }}
+              >
+                <div style={{
+                  maxWidth: '86%',
+                  padding: '12px 16px',
+                  borderRadius: '14px',
+                  borderTopRightRadius: msg.role === 'user' ? '2px' : '14px',
+                  borderTopLeftRadius: msg.role === 'user' ? '14px' : '2px',
+                  background: msg.role === 'user'
+                    ? '#FFF4B7'
+                    : 'rgba(4, 8, 20, 0.92)',
+                  border: msg.role === 'user'
+                    ? '1px solid #FFF4B7'
+                    : '1px solid rgba(0, 106, 103, 0.35)',
+                  color: msg.role === 'user' ? '#02040a' : '#f8fafc',
+                  wordBreak: 'break-word',
+                  textAlign: 'left',
+                  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.5)'
+                }}>
+                  {msg.role === 'user' ? (
+                    <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: '1.45', color: '#02040a', fontWeight: 600 }}>{msg.text}</p>
+                  ) : (
+                    renderMessageContent(msg.text)
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {sendingChat && (
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <div style={{
+                  maxWidth: '85%',
+                  padding: '12px 16px',
+                  borderRadius: '14px',
+                  background: 'rgba(4, 8, 20, 0.92)',
+                  border: '1px solid rgba(0, 106, 103, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#FFF4B7', display: 'inline-block', animation: 'bounce 1.4s infinite ease-in-out' }} />
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#FFF4B7', display: 'inline-block', animation: 'bounce 1.4s infinite ease-in-out 0.2s' }} />
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#FFF4B7', display: 'inline-block', animation: 'bounce 1.4s infinite ease-in-out 0.4s' }} />
+                </div>
+              </div>
+            )}
+
+            {/* Quick Suggestion Chips */}
+            {messages.length <= 1 && !sendingChat && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', textAlign: 'left' }}>
+                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#FFF4B7', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'JetBrains Mono, monospace' }}>
+                  Suggested questions
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {suggestionChips.map((chip, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSendMessage(chip.message)}
+                      style={{
+                        padding: '9px 12px',
+                        background: 'rgba(0, 106, 103, 0.2)',
+                        border: '1px solid rgba(0, 106, 103, 0.45)',
+                        borderRadius: '8px',
+                        color: '#FFF4B7',
+                        fontSize: '0.76rem',
+                        fontWeight: 600,
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        fontFamily: 'Plus Jakarta Sans, sans-serif'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(0, 106, 103, 0.4)';
+                        e.currentTarget.style.borderColor = '#FFF4B7';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(0, 106, 103, 0.2)';
+                        e.currentTarget.style.borderColor = 'rgba(0, 106, 103, 0.45)';
+                      }}
+                    >
+                      {chip.text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input Footer */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
+            style={{
+              padding: '14px 16px',
+              borderTop: '1px solid rgba(0, 106, 103, 0.35)',
+              background: 'rgba(2, 5, 14, 0.98)',
+              display: 'flex',
+              gap: '8px'
+            }}
+          >
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Ask Copilot anything..."
+              style={{
+                flex: 1,
+                background: 'rgba(2, 5, 14, 0.9)',
+                border: '1px solid rgba(0, 106, 103, 0.45)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontSize: '0.82rem',
+                color: '#f8fafc',
+                outline: 'none',
+                transition: 'border-color 0.2s',
+                fontFamily: 'Plus Jakarta Sans, sans-serif'
+              }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = '#FFF4B7')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(0, 106, 103, 0.45)')}
+            />
+            <button
+              type="submit"
+              disabled={!chatInput.trim() || sendingChat}
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '8px',
+                background: chatInput.trim() && !sendingChat
+                  ? '#FFF4B7'
+                  : 'rgba(255, 255, 255, 0.04)',
+                border: chatInput.trim() && !sendingChat
+                  ? '1px solid #FFF4B7'
+                  : '1px solid rgba(0, 106, 103, 0.25)',
+                color: chatInput.trim() && !sendingChat ? '#02040a' : 'var(--text-dim)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: chatInput.trim() && !sendingChat ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Send size={16} />
+            </button>
+          </form>
+        </div>
+      )}
+    </>
+  );
+}

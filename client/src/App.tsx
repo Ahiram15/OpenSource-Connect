@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import IssueList from './pages/IssueList';
 import IssueDetail from './pages/IssueDetail';
 import Profile from './pages/Profile';
+import GlobalChatCopilot from './components/GlobalChatCopilot';
 import { getAuthToken, setAuthToken, logout, isAuthenticated, getAuthUrl } from './services/api';
 
 const GithubIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
@@ -45,54 +46,61 @@ function HeaderContent({ loggedIn, setLoggedIn }: { loggedIn: boolean; setLogged
       position: 'sticky',
       top: 0,
       zIndex: 100,
-      background: 'rgba(7, 9, 14, 0.85)',
-      backdropFilter: 'blur(16px)',
-      borderBottom: '1px solid var(--glass-border)',
+      background: 'rgba(2, 5, 14, 0.88)',
+      backdropFilter: 'blur(20px) saturate(180%)',
+      borderBottom: '1px solid rgba(0, 106, 103, 0.28)',
+      boxShadow: '0 4px 30px rgba(0, 0, 0, 0.7)',
       padding: '0 32px',
-      height: '70px',
+      height: '72px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between'
     }}>
       {/* Logo */}
-      <NavLink to="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <NavLink to="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '14px' }}>
         <div style={{
-          width: '38px',
-          height: '38px',
-          borderRadius: '10px',
-          background: 'linear-gradient(135deg, #6366f1 0%, #38bdf8 100%)',
+          width: '40px',
+          height: '40px',
+          borderRadius: '12px',
+          background: 'rgba(0, 106, 103, 0.25)',
+          border: '1px solid rgba(255, 244, 183, 0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 0 16px var(--primary-glow)'
+          boxShadow: '0 0 20px rgba(0, 106, 103, 0.35)'
         }}>
-          <Sparkles size={20} color="#ffffff" />
+          <Sparkles size={20} color="#FFF4B7" />
         </div>
-        <span style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em' }} className="gradient-text">
-          OpenSource Connect
-        </span>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: '1.28rem', fontWeight: 800, letterSpacing: '-0.04em', fontFamily: 'Sora, Outfit, sans-serif' }} className="gradient-text">
+            OpenSource Connect
+          </span>
+          <span style={{ fontSize: '0.64rem', color: '#FFF4B7', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 700, marginTop: '-2px', fontFamily: 'JetBrains Mono, monospace' }}>
+            AI Dev Intelligence
+          </span>
+        </div>
       </NavLink>
 
       {/* Navigation Links */}
       <nav style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <NavLink 
-          to="/dashboard" 
+        <NavLink
+          to="/dashboard"
           className={({ isActive }: { isActive: boolean }) => isActive ? "nav-link active" : "nav-link"}
         >
           <LayoutDashboard size={17} />
           Dashboard
         </NavLink>
 
-        <NavLink 
-          to="/issues" 
+        <NavLink
+          to="/issues"
           className={({ isActive }: { isActive: boolean }) => isActive ? "nav-link active" : "nav-link"}
         >
           <Compass size={17} />
           Issue Feed
         </NavLink>
 
-        <NavLink 
-          to="/profile" 
+        <NavLink
+          to="/profile"
           className={({ isActive }: { isActive: boolean }) => isActive ? "nav-link active" : "nav-link"}
         >
           <User size={17} />
@@ -169,29 +177,32 @@ export default function App(): React.ReactElement {
 
         {/* Global Footer */}
         <footer style={{
-          borderTop: '1px solid var(--glass-border)',
-          background: 'rgba(7, 9, 14, 0.9)',
+          borderTop: '1px solid rgba(0, 106, 103, 0.28)',
+          background: 'rgba(2, 5, 14, 0.95)',
           backdropFilter: 'blur(16px)',
           padding: '24px 32px',
           marginTop: 'auto'
         }}>
           <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'linear-gradient(135deg, #6366f1 0%, #38bdf8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Sparkles size={14} color="#ffffff" />
+              <div style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'rgba(0, 106, 103, 0.3)', border: '1px solid rgba(255, 244, 183, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Sparkles size={14} color="#FFF4B7" />
               </div>
-              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f8fafc' }}>OpenSource Connect</span>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontFamily: 'monospace', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '12px' }}>v1.2.0</span>
+              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f8fafc', fontFamily: 'Sora, sans-serif' }}>OpenSource Connect</span>
+              <span style={{ fontSize: '0.72rem', color: '#FFF4B7', fontFamily: 'JetBrains Mono, monospace', background: 'rgba(0, 106, 103, 0.25)', border: '1px solid rgba(0, 106, 103, 0.4)', padding: '2px 8px', borderRadius: '12px' }}>v2.0</span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px', fontSize: '0.8rem', color: 'var(--text-dim)', flexWrap: 'wrap' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981', display: 'inline-block' }} />
                 GitHub API Status: Operational
               </span>
             </div>
           </div>
         </footer>
+
+        {/* Global AI Copilot Chat pinned to bottom right corner */}
+        <GlobalChatCopilot />
       </div>
     </Router>
   );

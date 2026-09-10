@@ -9,9 +9,9 @@ const defaultAvailableList: string[] = [
 ];
 
 const levelMeta: Record<string, { color: string; bg: string; border: string; emoji: string }> = {
-  Beginner:     { color: '#34d399', bg: 'rgba(52,211,153,0.08)',  border: 'rgba(52,211,153,0.25)',  emoji: '🌱' },
-  Intermediate: { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',  border: 'rgba(251,191,36,0.25)',  emoji: '⚡' },
-  Advanced:     { color: '#818cf8', bg: 'rgba(99,102,241,0.08)',  border: 'rgba(99,102,241,0.25)',  emoji: '🚀' },
+  Beginner: { color: '#34d399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.3)', emoji: '🌱' },
+  Intermediate: { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.3)', emoji: '⚡' },
+  Advanced: { color: '#FFF4B7', bg: 'rgba(255,244,183,0.15)', border: 'rgba(255,244,183,0.4)', emoji: '🚀' },
 };
 
 interface ProfileProps {
@@ -20,18 +20,18 @@ interface ProfileProps {
 
 export default function Profile({ setLoggedIn }: ProfileProps): React.ReactElement {
   const navigate = useNavigate();
-  const [profile, setProfile]               = useState<UserProfile | null>(null);
-  const [loading, setLoading]               = useState<boolean>(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  const [experienceLevel, setExperienceLevel]     = useState<string>('Beginner');
-  const [displayName, setDisplayName]             = useState<string>('');
-  const [isEditingName, setIsEditingName]         = useState<boolean>(false);
-  const [customSkillInput, setCustomSkillInput]   = useState<string>('');
-  const [targetDomain, setTargetDomain]           = useState<string>('🌐 Frontend Development');
-  const [weeklyGoal, setWeeklyGoal]               = useState<string>('2-3 Issues / Week (Regular)');
-  const [starThreshold, setStarThreshold]         = useState<string>('All Repositories (0+ stars)');
-  const [saving, setSaving]                       = useState<boolean>(false);
-  const [savedSuccess, setSavedSuccess]           = useState<boolean>(false);
+  const [experienceLevel, setExperienceLevel] = useState<string>('Beginner');
+  const [displayName, setDisplayName] = useState<string>('');
+  const [isEditingName, setIsEditingName] = useState<boolean>(false);
+  const [customSkillInput, setCustomSkillInput] = useState<string>('');
+  const [targetDomain, setTargetDomain] = useState<string>('🌐 Frontend Development');
+  const [weeklyGoal, setWeeklyGoal] = useState<string>('2-3 Issues / Week (Regular)');
+  const [starThreshold, setStarThreshold] = useState<string>('All Repositories (0+ stars)');
+  const [saving, setSaving] = useState<boolean>(false);
+  const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
 
   useEffect(() => {
     fetchUserProfile()
@@ -234,10 +234,10 @@ export default function Profile({ setLoggedIn }: ProfileProps): React.ReactEleme
           {/* ── GitHub Stats Row ── */}
           <div style={{ display: 'flex', gap: '0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '24px', paddingTop: '20px', flexWrap: 'wrap' }}>
             {[
-              { icon: <GitFork size={14} />,  label: 'Public Repos', value: profile.publicRepos ?? '—' },
-              { icon: <Users size={14} />,    label: 'Followers',    value: profile.followers   ?? '—' },
-              { icon: <Star size={14} />,     label: 'Following',    value: profile.following   ?? '—' },
-              { icon: <BookOpen size={14} />, label: 'Skills',       value: selectedInterests.length },
+              { icon: <GitFork size={14} />, label: 'Public Repos', value: profile.publicRepos ?? '—' },
+              { icon: <Users size={14} />, label: 'Followers', value: profile.followers ?? '—' },
+              { icon: <Star size={14} />, label: 'Following', value: profile.following ?? '—' },
+              { icon: <BookOpen size={14} />, label: 'Skills', value: selectedInterests.length },
             ].map((stat, i) => (
               <div
                 key={stat.label}

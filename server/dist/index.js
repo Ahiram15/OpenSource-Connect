@@ -13,6 +13,8 @@ const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
+// Trust proxy for Vercel / reverse proxy HTTPS forwarding
+app.set('trust proxy', true);
 // Middleware
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
@@ -24,13 +26,18 @@ app.get('/api/health', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
-// Register API Routes
+// Register API Routes (support both /api/ and direct paths for Vercel serverless)
 app.use('/api/auth', authRoutes_1.default);
+app.use('/auth', authRoutes_1.default);
 app.use('/api/user', userRoutes_1.default);
+app.use('/user', userRoutes_1.default);
 app.use('/api/issues', issueRoutes_1.default);
-// Start Server
-app.listen(PORT, () => {
-    console.log(`🚀 OpenSource Connect Server listening on http://localhost:${PORT}`);
-    (0, db_1.connectDB)();
-});
+app.use('/issues', issueRoutes_1.default);
+// Start Server (only when running locally, skip in Vercel serverless)
+if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+        console.log(`🚀 OpenSource Connect Server listening on http://localhost:${PORT}`);
+        (0, db_1.connectDB)();
+    });
+}
 exports.default = app;

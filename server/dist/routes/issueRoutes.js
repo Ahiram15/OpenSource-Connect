@@ -2,7 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const issueController_1 = require("../controllers/issueController");
+const authMiddleware_1 = require("../middleware/authMiddleware");
 const router = (0, express_1.Router)();
 router.get('/recommendations', issueController_1.getRecommendations);
 router.post('/:id/bookmark', issueController_1.toggleBookmark);
+router.post('/pr-starter', issueController_1.getPRStarter);
+router.post('/:id/chat', authMiddleware_1.authenticateJwt, issueController_1.chatAboutIssue);
 exports.default = router;
