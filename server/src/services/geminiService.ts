@@ -20,7 +20,8 @@ export const analyzeIssueWithGemini = async (
   if (apiKey && apiKey !== 'your_gemini_api_key') {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+      const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+      const model = genAI.getGenerativeModel({ model: modelName });
 
       const prompt = `You are an expert AI mentor for open-source developers.
 Analyze how well this GitHub issue matches a developer's profile and generate a structured JSON response.
@@ -88,6 +89,8 @@ const generateHeuristicAnalysis = (
 
 export interface AIPRStarter {
   prTitle: string;
+  hint1?: string;
+  hint2?: string;
   implementationOutline: string[];
   codeDraft: string;
   prChecklist: string[];
@@ -103,10 +106,11 @@ export const generatePRStarterWithGemini = async (
   if (apiKey && apiKey !== 'your_gemini_api_key') {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+      const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+      const model = genAI.getGenerativeModel({ model: modelName });
 
-      const prompt = `You are a Principal Open Source Engineer.
-Generate an accurate, copy-pasteable Pull Request code fix draft and starter blueprint for this specific GitHub issue.
+      const prompt = `You are a Principal Open Source Engineer and Mentor.
+Generate an accurate, copy-pasteable Pull Request code fix draft, progressive hints, and starter blueprint for this specific GitHub issue.
 
 Tech Stack: ${techStack.join(', ')}
 Issue Title: ${issueTitle}
@@ -117,6 +121,8 @@ CRITICAL: Provide realistic, functional code in "codeDraft" specific to the fram
 Respond strictly with valid JSON adhering to this interface:
 {
   "prTitle": "Conventional Commit title e.g. fix(router): cleanup route transition listeners on unmount",
+  "hint1": "Architectural clue: which file/module to inspect and key concept without spoiling the code",
+  "hint2": "Algorithmic clue: step-by-step logic and condition to implement before showing full code",
   "implementationOutline": [
     "1. Locate event listener registration inside component lifecycle hook",
     "2. Add return statement cleanup function to unbind listener when unmounting",
@@ -150,6 +156,8 @@ const generateHeuristicPRStarter = (title: string, stack: string[]): AIPRStarter
   if (lowerTitle.includes('routing') || lowerTitle.includes('unmount') || lowerTitle.includes('leak') || lowerTitle.includes('react')) {
     return {
       prTitle: 'fix(router): cleanup route transition event listeners on unmount',
+      hint1: 'Look in the navigation transition hook. The event listener is registered during component mount, but when users navigate away, the listener is never unbound, causing an active memory leak.',
+      hint2: 'In the useEffect hook, return a cleanup callback function. Verify if the unlisten handler is a function, and call unlisten() when the component is unmounted.',
       implementationOutline: [
         'Locate the custom router transition hook inside the routing module',
         'Add a return cleanup function inside useEffect to remove the transition listener',
@@ -168,6 +176,8 @@ const generateHeuristicPRStarter = (title: string, stack: string[]): AIPRStarter
   if (lowerTitle.includes('typescript') || lowerTitle.includes('middleware') || lowerTitle.includes('type') || lowerTitle.includes('express')) {
     return {
       prTitle: 'feat(types): add explicit TypeScript definitions for custom middleware hooks',
+      hint1: 'Inspect the Express middleware pipeline declaration file (index.d.ts). Currently, the handler parameters fall back to "any", which breaks strict null checking in consuming apps.',
+      hint2: 'Declare generic type parameters for <Params, ResBody, ReqBody> on the middleware interface and type the NextFunction callback strictly.',
       implementationOutline: [
         'Define explicit generic types for NextFunction pipeline declarations',
         'Export CustomMiddlewareHook interface for middleware extensibility',
@@ -255,10 +265,23 @@ export const chatAboutIssueWithGemini = async (
   if (apiKey && apiKey !== 'your_gemini_api_key') {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+      const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+      const model = genAI.getGenerativeModel({ model: modelName });
 
-      const systemInstruction = `You are "OpenSource Connect Copilot", an expert AI mentor for open-source developers.
-The developer is currently trying to solve the following GitHub issue:
+      const isGeneral = !issueTitle || issueTitle === 'General Open Source Assistance' || issueTitle === 'GitHub Issue' || issueTitle.toLowerCase().includes('general');
+
+      const systemInstruction = isGeneral
+        ? `You are "OpenSource Connect Copilot", an expert, friendly AI mentor for open-source developers.
+Developer Profile:
+- Skills/Interests: ${userInterests.join(', ') || 'TypeScript, React, Node.js'}
+- Experience Level: ${userExperience || 'Developer'}
+
+Mission:
+- Answer questions directly, accurately, and with structured advice.
+- When asked "How do I choose the best first issue based on my skills?", provide concrete, actionable steps: matching stack, beginner labels (good first issue, help wanted), inspecting repo activity, starting with small docs or bug fixes, and using OpenSource Connect match scores.
+- When asked about Git/PR workflows, match scores, or repo architectures, give clean step-by-step guidance with markdown formatting.`
+        : `You are "OpenSource Connect Copilot", an expert AI mentor for open-source developers.
+The developer is currently tackling the following GitHub issue:
 - Issue Title: ${issueTitle}
 - Issue Description: ${issueBody}
 
@@ -266,9 +289,7 @@ Developer Profile:
 - Skills/Interests: ${userInterests.join(', ')}
 - Experience Level: ${userExperience}
 
-Your goal is to guide the user in understanding the issue, setting up their workspace, writing code, debugging, or preparing their Pull Request.
-Provide clear, action-oriented, helpful, and concise responses. Use markdown for code formatting.
-If the developer asks for code, provide high-quality, practical code snippets matching the tech stack of the issue.`;
+Your goal: guide the user through understanding this issue, locating relevant files, testing, fixing, and submitting their Pull Request. Provide clear, direct, and actionable answers using markdown.`;
 
       // Filter out greeting or any model messages before the first user message
       const firstUserIdx = chatHistory.findIndex((msg) => msg.role === 'user');
@@ -279,7 +300,7 @@ If the developer asks for code, provide high-quality, practical code snippets ma
           role: msg.role === 'user' ? 'user' : 'model',
           parts: [{ text: msg.text }],
         })),
-        systemInstruction: { parts: [{ text: systemInstruction }] },
+        systemInstruction: { role: 'system', parts: [{ text: systemInstruction }] },
       });
 
       const result = await chat.sendMessage(userMessage);
@@ -300,50 +321,156 @@ const generateHeuristicChatResponse = (
   userInterests: string[]
 ): string => {
   const msgLower = message.toLowerCase();
-  
-  if (msgLower.includes('setup') || msgLower.includes('run') || msgLower.includes('start') || msgLower.includes('install')) {
-    return `To set up and run this project locally, follow these standard steps:
-1. **Clone the repository**:
-   \`\`\`bash
-   git clone https://github.com/example/${issueTitle.toLowerCase().replace(/[^a-z0-9]/g, '-')}.git
-   cd ${issueTitle.toLowerCase().replace(/[^a-z0-9]/g, '-')}
-   \`\`\`
-2. **Install dependencies**:
-   \`\`\`bash
-   npm install
-   \`\`\`
-3. **Start the development server**:
-   \`\`\`bash
-   npm run dev
-   \`\`\`
-Let me know if you encounter any build errors during setup!`;
+  const stackName = userInterests.slice(0, 3).join(', ') || 'TypeScript, React, Node.js';
+
+  // 1. How to choose best first issue / skills matching
+  if (
+    msgLower.includes('choose') ||
+    msgLower.includes('pick') ||
+    msgLower.includes('best first issue') ||
+    msgLower.includes('first issue') ||
+    msgLower.includes('skills') ||
+    msgLower.includes('beginner')
+  ) {
+    return `To choose the best first open-source issue aligned with your skills (${stackName}), follow this proven 4-step framework:
+
+1. **Filter by Matching Tech Stack**: Focus strictly on repositories using languages and tools you know (${stackName}). Avoid switching languages on your first contribution so you can focus on the codebase conventions.
+2. **Target High-Signal Beginner Labels**:
+   - \`good first issue\` — Curated by maintainers specifically for new contributors with contained scopes.
+   - \`help wanted\` — Explicit maintainer invitation with lower risk of conflicts.
+   - \`documentation\` or \`good first bug\` — Great entry points to understand the CI/CD pipeline.
+3. **Verify Repository Health & Responsiveness**:
+   - Check the **Pull Requests** tab: Are maintainers actively merging or reviewing PRs in the last 7–14 days?
+   - Look for clear **CONTRIBUTING.md** and active discussions.
+4. **Leverage OpenSource Connect Match Scores**:
+   - Head over to the **Issue Feed** tab where issues are pre-ranked with 85%+ match scores based on your GitHub commit history!`;
   }
 
+  // 2. Git Pull Request Workflow
+  if (
+    msgLower.includes('git') ||
+    msgLower.includes('pull request') ||
+    msgLower.includes('workflow') ||
+    msgLower.includes('pr') ||
+    msgLower.includes('fork')
+  ) {
+    return `Here is the standard step-by-step Git workflow to submit your Pull Request:
+
+1. **Fork & Clone**:
+   \`\`\`bash
+   git clone https://github.com/YOUR_USERNAME/repo-name.git
+   cd repo-name
+   git remote add upstream https://github.com/ORIGINAL_OWNER/repo-name.git
+   \`\`\`
+2. **Create a Dedicated Branch**:
+   \`\`\`bash
+   git checkout -b fix/issue-description
+   \`\`\`
+3. **Implement, Test & Verify**:
+   \`\`\`bash
+   npm test
+   git status
+   \`\`\`
+4. **Commit with Semantic Messages**:
+   \`\`\`bash
+   git commit -m "fix: resolve edge case in data parser (#123)"
+   \`\`\`
+5. **Push & Open PR**:
+   \`\`\`bash
+   git push origin fix/issue-description
+   \`\`\`
+Then visit the original repository on GitHub to click **Compare & pull request**!`;
+  }
+
+  // 3. Match Score Explanation
+  if (
+    msgLower.includes('match') ||
+    msgLower.includes('score') ||
+    msgLower.includes('calculate') ||
+    msgLower.includes('accuracy') ||
+    msgLower.includes('algorithm')
+  ) {
+    return `OpenSource Connect calculates match scores using a multi-factor developer profiling model:
+
+- **Language Overlap (40%)**: Compares the repository's primary languages against your verified language breakdown (${stackName}).
+- **Topic & Keyword Alignment (30%)**: Matches issue labels (e.g., \`react\`, \`state-management\`, \`api\`) against your extracted technical skills.
+- **Difficulty & Scope Calibration (20%)**: Evaluates issue complexity, lines of code, and estimated resolution time against your experience level.
+- **Repository Health Factor (10%)**: Boosts issues from active repositories with clear documentation and responsive maintainers.`;
+  }
+
+  // 4. Codebase Architecture / Where to start
+  if (
+    msgLower.includes('where') ||
+    msgLower.includes('start') ||
+    msgLower.includes('architecture') ||
+    msgLower.includes('structure') ||
+    msgLower.includes('files')
+  ) {
+    return `To quickly orient yourself in this codebase:
+
+1. **Start at the Entry Points**: Inspect \`package.json\` (check \`scripts\` and \`main\`), then review \`src/index.ts\` or main application router.
+2. **Search for Keywords**: Use Ripgrep or GitHub search (\`Ctrl+F\`) for the specific error string, function name, or component mentioned in the issue.
+3. **Trace Tests First**: Look inside \`__tests__/\` or \`*.test.ts\` files related to the feature. Tests are the fastest documentation for expected inputs and outputs.
+4. **Reproduce Locally**: Write a minimal failing test before writing any fix code!`;
+  }
+
+  // 5. Testing
+  if (msgLower.includes('test') || msgLower.includes('spec') || msgLower.includes('verify')) {
+    return `To test your changes reliably:
+
+1. **Run Existing Test Suite**:
+   \`\`\`bash
+   npm test
+   \`\`\`
+2. **Run Targeted Tests**:
+   \`\`\`bash
+   npm test -- --watch
+   \`\`\`
+3. **Write a Unit Test for Your Fix**: Ensure your new test fails without your fix and passes with it to avoid regressions.`;
+  }
+
+  // 6. Setup / Install / Run
+  if (msgLower.includes('setup') || msgLower.includes('run') || msgLower.includes('install')) {
+    return `Standard setup commands for this project:
+
+\`\`\`bash
+# 1. Install dependencies
+npm install
+
+# 2. Run local development environment
+npm run dev
+
+# 3. Run linter and type-checking
+npm run lint
+npm run build
+\`\`\`
+Let me know if you run into any dependency or version conflicts!`;
+  }
+
+  // 7. Code fix / Snippet
   if (msgLower.includes('code') || msgLower.includes('write') || msgLower.includes('snippet') || msgLower.includes('fix')) {
-    const tech = userInterests[0] || 'TypeScript';
-    return `Here is a custom helper draft in **${tech}** to address the issue:
+    return `Here is a clean implementation pattern in **${userInterests[0] || 'TypeScript'}**:
+
 \`\`\`typescript
-// Suggested helper function
-export const resolveIssueContext = (data: any) => {
-  if (!data) return null;
-  // TODO: Add logic to clean up listener or validate state
-  console.log("Processing resolution draft...");
+export const handleIssueResolution = async <T>(input: T): Promise<{ success: boolean; data: T }> => {
+  if (!input) {
+    throw new Error('Invalid input parameter');
+  }
+
+  // Process and return validated result
   return {
-    ...data,
-    resolvedAt: new Date()
+    success: true,
+    data: input,
   };
 };
 \`\`\`
-You can integrate this helper into your main container. Let me know if this makes sense or if you want me to expand it!`;
+Let me know what specific function or component you want me to write or refactor!`;
   }
 
-  return `Hello! As your AI mentor, I am here to help you solve this issue: "${issueTitle}". 
+  // General helpful response tailored directly to developer's query
+  return `Great question! Here is how to approach this for your open-source journey:
 
-Feel free to ask me about:
-- Local workspace setup & commands
-- Explaining the file structures
-- Writing or refactoring code snippets in ${userInterests.slice(0, 3).join(', ') || 'your tech stack'}
-- Preparing your Pull Request description
-
-What would you like to tackle first?`;
+- **Stack Focus**: Focus on your primary technologies (**${stackName}**).
+- **Recommended Next Step**: Head to the **Issue Feed** to view personalized issues curated for your skills, or open an issue to access the **Guided AI Solution Lab**.
+- **Ask me anytime**: I can help you with specific file structures, writing test cases, or drafting your Pull Request description!`;
 };

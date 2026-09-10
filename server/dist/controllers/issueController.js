@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.toggleBookmark = exports.getRecommendations = void 0;
+exports.chatAboutIssue = exports.getPRStarter = exports.toggleBookmark = exports.getRecommendations = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const User_1 = __importDefault(require("../models/User"));
 const githubService_1 = require("../services/githubService");
@@ -76,3 +76,48 @@ const toggleBookmark = async (req, res) => {
     }
 };
 exports.toggleBookmark = toggleBookmark;
+// POST /api/issues/pr-starter
+const getPRStarter = async (req, res) => {
+    try {
+        const { title, body, stack } = req.body;
+        if (!title) {
+            res.status(400).json({ error: 'Issue title is required' });
+            return;
+        }
+        const techStack = Array.isArray(stack) && stack.length > 0 ? stack : ['TypeScript', 'React'];
+        const result = await (0, geminiService_1.generatePRStarterWithGemini)(title, body || '', techStack);
+        res.status(200).json(result);
+    }
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+exports.getPRStarter = getPRStarter;
+// POST /api/issues/:id/chat
+const chatAboutIssue = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { message, history, issueTitle, issueBody } = req.body;
+        if (!message) {
+            res.status(400).json({ error: 'Message is required' });
+            return;
+        }
+        // Get user preferences (use real user profile or fallback details)
+        let userInterests = ['TypeScript', 'React', 'Node.js'];
+        let userExperience = 'Beginner';
+        const githubId = req.user?.githubId;
+        if (mongoose_1.default.connection.readyState === 1 && githubId) {
+            const user = await User_1.default.findOne({ githubId });
+            if (user) {
+                userInterests = user.technicalInterests;
+                userExperience = user.experienceLevel;
+            }
+        }
+        const reply = await (0, geminiService_1.chatAboutIssueWithGemini)(issueTitle || 'GitHub Issue', issueBody || '', message, history || [], userInterests, userExperience);
+        res.status(200).json({ reply });
+    }
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+exports.chatAboutIssue = chatAboutIssue;

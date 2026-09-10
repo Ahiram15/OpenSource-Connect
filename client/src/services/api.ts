@@ -96,6 +96,8 @@ export const toggleIssueBookmark = async (issueId: string): Promise<{ savedIssue
 
 export interface AIPRStarter {
   prTitle: string;
+  hint1?: string;
+  hint2?: string;
   implementationOutline: string[];
   codeDraft: string;
   prChecklist: string[];
