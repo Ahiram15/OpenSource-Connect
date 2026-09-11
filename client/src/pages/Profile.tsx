@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchUserProfile, updateUserProfile, logout, getAuthUrl, UserProfile } from '../services/api';
-import { MapPin, Link2, Users, GitFork, Star, BookOpen, LogOut, RefreshCw, Shield } from 'lucide-react';
+import { generateDeveloperPortfolioPDF } from '../utils/pdfExport';
+import { MapPin, Link2, Users, GitFork, Star, BookOpen, LogOut, RefreshCw, Shield, Share2, Check, FileText } from 'lucide-react';
 
 const defaultAvailableList: string[] = [
   'React', 'Node', 'Python', 'MongoDB', 'Express', 'JavaScript',
@@ -23,6 +24,8 @@ export default function Profile({ setLoggedIn }: ProfileProps): React.ReactEleme
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [copiedShareLink, setCopiedShareLink] = useState<boolean>(false);
+  const [exportingPDF, setExportingPDF] = useState<boolean>(false);
   const [experienceLevel, setExperienceLevel] = useState<string>('Beginner');
   const [displayName, setDisplayName] = useState<string>('');
   const [isEditingName, setIsEditingName] = useState<boolean>(false);
@@ -112,14 +115,88 @@ export default function Profile({ setLoggedIn }: ProfileProps): React.ReactEleme
           </p>
         </div>
 
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="btn-primary"
-          style={{ padding: '10px 20px', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', border: 'none', boxShadow: 'none' }}
-        >
-          {saving ? 'Saving…' : savedSuccess ? '✓ Saved!' : 'Save Preferences'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            type="button"
+            onClick={() => {
+              const url = `${window.location.origin}/dashboard?user=${encodeURIComponent(profile?.username || 'dev')}`;
+              try {
+                if (navigator.clipboard && window.isSecureContext) {
+                  navigator.clipboard.writeText(url);
+                } else {
+                  const textArea = document.createElement('textarea');
+                  textArea.value = url;
+                  document.body.appendChild(textArea);
+                  textArea.select();
+                  document.execCommand('copy');
+                  document.body.removeChild(textArea);
+                }
+                setCopiedShareLink(true);
+                setTimeout(() => setCopiedShareLink(false), 2000);
+              } catch (err) {
+                console.error(err);
+              }
+            }}
+            className="btn-secondary"
+            style={{
+              padding: '10px 18px',
+              borderRadius: '6px',
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: '#FFF4B7',
+              border: '1px solid rgba(255, 244, 183, 0.4)',
+              background: 'rgba(0, 106, 103, 0.25)'
+            }}
+          >
+            {copiedShareLink ? <Check size={14} color="#34d399" /> : <Share2 size={14} color="#FFF4B7" />}
+            {copiedShareLink ? 'Link Copied!' : 'Share Portfolio'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                setExportingPDF(true);
+                generateDeveloperPortfolioPDF({ profile });
+              } catch (err) {
+                console.error('PDF export error:', err);
+              } finally {
+                setTimeout(() => setExportingPDF(false), 1200);
+              }
+            }}
+            disabled={exportingPDF}
+            className="btn-secondary"
+            style={{
+              padding: '10px 18px',
+              borderRadius: '6px',
+              fontSize: '0.8rem',
+              cursor: exportingPDF ? 'wait' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: '#F9F7F7',
+              border: '1px solid rgba(63, 114, 175, 0.45)',
+              background: 'rgba(17, 45, 78, 0.85)',
+              opacity: exportingPDF ? 0.75 : 1
+            }}
+            title="Download verified developer portfolio as PDF"
+          >
+            {exportingPDF ? <Check size={14} color="#34d399" /> : <FileText size={14} color="#FFF4B7" />}
+            {exportingPDF ? 'Generating...' : 'Export PDF'}
+          </button>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-primary"
+            style={{ padding: '10px 20px', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', border: 'none', boxShadow: 'none' }}
+          >
+            {saving ? 'Saving…' : savedSuccess ? '✓ Saved!' : 'Save Preferences'}
+          </button>
+        </div>
       </div>
 
       {/* ─── GitHub Profile Hero Card ─────────────────────────────────── */}

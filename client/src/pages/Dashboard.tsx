@@ -1,8 +1,62 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { fetchUserProfile, UserProfile, fetchUserReposFromGitHub, GitHubRepo } from '../services/api';
-import { Code2, GitMerge, Bookmark, Award, Sparkles, Download, Flame, GitPullRequest, Star, Zap, ExternalLink, GitFork, Lock, CheckCircle2, ArrowRight } from 'lucide-react';
+import { generateDeveloperPortfolioPDF } from '../utils/pdfExport';
+import {
+  Code2,
+  GitMerge,
+  Bookmark,
+  Award,
+  Sparkles,
+  Download,
+  FileText,
+  Film,
+  Flame,
+  GitPullRequest,
+  Star,
+  Zap,
+  ExternalLink,
+  GitFork,
+  Lock,
+  CheckCircle2,
+  ArrowRight,
+  Share2,
+  Copy,
+  Check,
+  ShieldCheck,
+  UserCheck
+} from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+
+const copyToClipboard = async (text: string): Promise<boolean> => {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) {
+    console.warn('navigator.clipboard failed, using fallback', err);
+  }
+
+  try {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    textArea.setAttribute('readonly', '');
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    return successful;
+  } catch (err) {
+    console.error('Fallback clipboard copy failed', err);
+    return false;
+  }
+};
 
 const vibrantGradients = [
   { text: '#F9F7F7', fill: 'linear-gradient(90deg, #3F72AF 0%, #DBE2EF 100%)', border: 'rgba(219, 226, 239, 0.4)', hex: '#3F72AF' },
@@ -114,44 +168,122 @@ const getRelativeTime = (dateStr: string): string => {
   if (isNaN(date.getTime())) return 'unknown';
   if (diffMins < 1) return 'just now';
   if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
   return `${diffDays}d ago`;
 };
 
 export default function Dashboard(): React.ReactElement {
-  const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [mounted, setMounted] = useState<boolean>(false);
   const [timeframe, setTimeframe] = useState<string>('All Time');
+  const [showShareModal, setShowShareModal] = useState<boolean>(false);
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [copiedMarkdown, setCopiedMarkdown] = useState<boolean>(false);
+  const [isPublicView, setIsPublicView] = useState<boolean>(false);
+  const [exportingPDF, setExportingPDF] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchUserProfile()
-      .then((data) => {
-        setProfile(data);
-        if (data.username) {
-          fetchUserReposFromGitHub(data.username)
-            .then((reposData) => {
-              if (Array.isArray(reposData)) {
-                setRepos(reposData);
-              }
-            })
-            .catch((err) => console.error('Failed to fetch GitHub repos:', err));
-        }
-      })
-      .catch((err) => console.error('Failed to load dashboard profile:', err));
+    const params = new URLSearchParams(window.location.search);
+    const targetUser = params.get('user');
+
+    if (targetUser && targetUser !== 'demo' && targetUser !== 'demo-user-123') {
+      setIsPublicView(true);
+      // Fetch public profile directly from GitHub API for the shared portfolio view
+      fetch(`https://api.github.com/users/${encodeURIComponent(targetUser)}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(ghUser => {
+          if (ghUser) {
+            setProfile({
+              githubId: String(ghUser.id),
+              username: ghUser.login,
+              displayName: ghUser.name || ghUser.login,
+              avatarUrl: ghUser.avatar_url,
+              bio: ghUser.bio || 'Open-source enthusiast & developer.',
+              location: ghUser.location || '',
+              githubProfileUrl: ghUser.html_url,
+              publicRepos: ghUser.public_repos || 0,
+              followers: ghUser.followers || 0,
+              following: ghUser.following || 0,
+              technicalInterests: ['TypeScript', 'JavaScript', 'React', 'Node.js', 'Python'],
+              languageBreakdown: { 'TypeScript': 45, 'JavaScript': 30, 'React': 15, 'Python': 10 },
+              experienceLevel: (ghUser.public_repos || 0) > 20 ? 'Advanced' : (ghUser.public_repos || 0) > 5 ? 'Intermediate' : 'Beginner',
+              savedIssueIds: []
+            });
+            fetchUserReposFromGitHub(ghUser.login)
+              .then(reposData => {
+                if (Array.isArray(reposData)) setRepos(reposData);
+              })
+              .catch(err => console.error(err));
+          } else {
+            loadOwnProfile();
+          }
+        })
+        .catch(() => loadOwnProfile());
+    } else {
+      loadOwnProfile();
+    }
+
+    function loadOwnProfile() {
+      fetchUserProfile()
+        .then((data) => {
+          setProfile(data);
+          if (data.username) {
+            fetchUserReposFromGitHub(data.username)
+              .then((reposData) => {
+                if (Array.isArray(reposData)) {
+                  setRepos(reposData);
+                }
+              })
+              .catch((err) => console.error('Failed to fetch GitHub repos:', err));
+          }
+        })
+        .catch((err) => console.error('Failed to load dashboard profile:', err));
+    }
+
     const timer = setTimeout(() => setMounted(true), 100);
     return () => clearTimeout(timer);
   }, []);
 
-  const handleExport = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(profile || {}, null, 2));
-    const a = document.createElement('a');
-    a.setAttribute('href', dataStr);
-    a.setAttribute('download', `profile_${profile?.username || 'dev'}.json`);
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+  const handleCopyLink = async () => {
+    const username = profile?.username || 'dev';
+    const url = `${window.location.origin}/dashboard?user=${encodeURIComponent(username)}`;
+    const success = await copyToClipboard(url);
+    if (success) {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
+
+  const handleCopyMarkdown = async () => {
+    const username = profile?.username || 'dev';
+    const displayName = profile?.displayName || profile?.username || 'Developer';
+    const md = `### 🌟 Open Source Contributor Profile
+**Developer:** [${displayName}](https://github.com/${username})
+- 🚀 **Tracked Contributions**: ${repos.length || profile?.publicRepos || 0}+ Repositories
+- 🏆 **Experience Tier**: ${profile?.experienceLevel || 'Beginner'} Contributor
+- 🛠️ **Top Skills**: ${(profile?.technicalInterests || []).slice(0, 4).join(', ')}
+- ⚡ **Verified by**: [OpenSource Connect](${window.location.origin}/dashboard?user=${encodeURIComponent(username)})`;
+
+    const success = await copyToClipboard(md);
+    if (success) {
+      setCopiedMarkdown(true);
+      setTimeout(() => setCopiedMarkdown(false), 2500);
+    }
+  };
+
+  const handleExportPDF = () => {
+    try {
+      setExportingPDF(true);
+      generateDeveloperPortfolioPDF({
+        profile,
+        repos,
+        timeframe
+      });
+    } catch (err) {
+      console.error('Failed to generate PDF report:', err);
+    } finally {
+      setTimeout(() => setExportingPDF(false), 1200);
+    }
   };
 
   const rawBreakdown = timeframe === 'Last 30 Days'
@@ -243,6 +375,46 @@ export default function Dashboard(): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }} className="animate-fade-in">
 
+      {/* ─── Public Shared Portfolio Banner ─────────────────────────────── */}
+      {isPublicView && (
+        <div style={{
+          background: 'linear-gradient(90deg, rgba(0, 106, 103, 0.45) 0%, rgba(16, 185, 129, 0.25) 100%)',
+          border: '1px solid rgba(255, 244, 183, 0.45)',
+          borderRadius: '14px',
+          padding: '14px 22px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <UserCheck size={20} color="#FFF4B7" />
+            <span style={{ fontSize: '0.9rem', color: '#f8fafc', fontWeight: 600 }}>
+              Viewing <strong style={{ color: '#FFF4B7' }}>@{profile?.username}</strong>'s Verified Public Contributor Portfolio
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              window.location.href = '/dashboard';
+            }}
+            style={{
+              background: 'rgba(255, 255, 255, 0.12)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
+              color: '#f8fafc',
+              padding: '6px 14px',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              fontWeight: 600
+            }}
+          >
+            Back to My Dashboard
+          </button>
+        </div>
+      )}
+
       {/* ─── Page Header: Title + Controls ─────────────────────────────── */}
       <div className="glass-panel" style={{ padding: '24px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)' }}>
         <div>
@@ -285,10 +457,10 @@ export default function Dashboard(): React.ReactElement {
             </select>
           </div>
 
-          {/* Export button */}
+          {/* Contribution Tracker Button */}
           <button
-            onClick={handleExport}
-            className="btn-secondary"
+            onClick={() => navigate('/tracker')}
+            className="btn-primary"
             style={{
               padding: '8px 16px',
               fontSize: '0.82rem',
@@ -299,8 +471,74 @@ export default function Dashboard(): React.ReactElement {
               gap: '6px'
             }}
           >
-            <Download size={14} />
-            Export Profile
+            <GitPullRequest size={14} />
+            Contribution Tracker
+          </button>
+
+          {/* Git Cinema Button */}
+          <button
+            onClick={() => navigate('/cinema')}
+            className="btn-secondary"
+            style={{
+              padding: '8px 16px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'rgba(0, 106, 103, 0.35)',
+              border: '1px solid rgba(255, 244, 183, 0.45)',
+              color: '#FFF4B7'
+            }}
+          >
+            <Film size={14} color="#FFF4B7" />
+            Git Cinema
+          </button>
+
+          {/* Share Portfolio Proof-of-Work Button */}
+          <button
+            onClick={() => setShowShareModal(true)}
+            className="btn-secondary"
+            style={{
+              padding: '8px 16px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'rgba(0, 106, 103, 0.25)',
+              border: '1px solid rgba(255, 244, 183, 0.4)',
+              color: '#FFF4B7'
+            }}
+          >
+            <Share2 size={14} color="#FFF4B7" />
+            Share Portfolio
+          </button>
+
+          {/* Export PDF button */}
+          <button
+            onClick={handleExportPDF}
+            disabled={exportingPDF}
+            className="btn-secondary"
+            style={{
+              padding: '8px 16px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: exportingPDF ? 'wait' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'rgba(17, 45, 78, 0.85)',
+              border: '1px solid rgba(63, 114, 175, 0.45)',
+              color: '#F9F7F7',
+              opacity: exportingPDF ? 0.75 : 1
+            }}
+            title="Download verified developer portfolio as PDF"
+          >
+            {exportingPDF ? <Check size={14} color="#34d399" /> : <FileText size={14} color="#FFF4B7" />}
+            {exportingPDF ? 'Generating...' : 'Export PDF'}
           </button>
 
           {/* Avatar chip */}
@@ -683,6 +921,192 @@ export default function Dashboard(): React.ReactElement {
           ))}
         </div>
       </div>
+
+      {/* ─── Shareable Contributor Portfolio & Proof of Work Modal ─────── */}
+      {showShareModal && typeof document !== 'undefined' && createPortal(
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowShareModal(false);
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            zIndex: 999999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            boxSizing: 'border-box'
+          }}
+        >
+          <div className="glass-panel animate-fade-in" style={{
+            maxWidth: '560px',
+            width: '100%',
+            padding: '32px',
+            borderRadius: '20px',
+            border: '1px solid rgba(0, 106, 103, 0.45)',
+            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.95)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
+            position: 'relative'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ShieldCheck size={24} color="#10b981" />
+                <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 700, color: '#f8fafc', fontFamily: 'Sora, sans-serif' }}>
+                  Contributor Proof of Work
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowShareModal(false)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.2rem', cursor: 'pointer', padding: '4px' }}
+                title="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Proof of Work Card Preview */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(2, 5, 14, 0.95) 0%, rgba(0, 106, 103, 0.3) 100%)',
+              border: '1px solid rgba(255, 244, 183, 0.35)',
+              borderRadius: '16px',
+              padding: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <img
+                    src={profile?.avatarUrl || 'https://avatars.githubusercontent.com/u/0'}
+                    alt="avatar"
+                    style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid #FFF4B7' }}
+                  />
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>
+                      {profile?.displayName || profile?.username || 'Developer'}
+                    </h4>
+                    <span style={{ fontSize: '0.75rem', color: '#FFF4B7', fontFamily: 'JetBrains Mono, monospace' }}>
+                      @{profile?.username || 'dev'} • {profile?.experienceLevel || 'Beginner'} Contributor
+                    </span>
+                  </div>
+                </div>
+
+                <span style={{
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  color: '#10b981',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  <CheckCircle2 size={12} />
+                  Verified Contributor
+                </span>
+              </div>
+
+              {/* Stats Highlight */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', textAlign: 'center', padding: '12px 0', borderTop: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>{profile?.publicRepos || 0}</div>
+                  <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase' }}>Public Repos</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#10b981' }}>{totalStars}</div>
+                  <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase' }}>Stars Earned</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#38bdf8' }}>{displayAchievements.filter(a => a.unlocked).length}</div>
+                  <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase' }}>Milestones</div>
+                </div>
+              </div>
+
+              {/* Top Tech Badges */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {(profile?.technicalInterests || []).slice(0, 5).map(tech => (
+                  <span key={tech} style={{ fontSize: '0.7rem', background: 'rgba(0, 106, 103, 0.25)', border: '1px solid rgba(0, 106, 103, 0.4)', padding: '2px 8px', borderRadius: '4px', color: '#FFF4B7', fontFamily: 'JetBrains Mono, monospace' }}>
+                    {tech}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Share & Copy Actions */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                onClick={handleCopyLink}
+                className="btn-primary"
+                style={{
+                  padding: '12px 18px',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                {copiedLink ? <Check size={16} /> : <Copy size={16} />}
+                {copiedLink ? 'Link Copied to Clipboard!' : 'Copy Shareable Portfolio Link'}
+              </button>
+
+              <button
+                onClick={handleCopyMarkdown}
+                className="btn-secondary"
+                style={{
+                  padding: '12px 18px',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                {copiedMarkdown ? <Check size={16} /> : <Code2 size={16} />}
+                {copiedMarkdown ? 'Markdown Copied to Clipboard!' : 'Copy GitHub README Badge & Markdown'}
+              </button>
+
+              {/* Social Share Shortcuts */}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out my verified open-source contributions and portfolio on OpenSource Connect! 🚀\n${window.location.origin}/dashboard?user=${encodeURIComponent(profile?.username || 'dev')}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary"
+                  style={{ flex: 1, textDecoration: 'none', textAlign: 'center', fontSize: '0.8rem', padding: '9px', justifyContent: 'center', display: 'flex', alignItems: 'center' }}
+                >
+                  Share on X (Twitter)
+                </a>
+                <a
+                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`${window.location.origin}/dashboard?user=${encodeURIComponent(profile?.username || 'dev')}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary"
+                  style={{ flex: 1, textDecoration: 'none', textAlign: 'center', fontSize: '0.8rem', padding: '9px', justifyContent: 'center', display: 'flex', alignItems: 'center' }}
+                >
+                  Share on LinkedIn
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
     </div>
   );

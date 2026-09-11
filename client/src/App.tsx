@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Sparkles, LayoutDashboard, Compass, User, LogOut, LogIn } from 'lucide-react';
+import { Sparkles, LayoutDashboard, Compass, User, LogOut, LogIn, GitPullRequest, Film } from 'lucide-react';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import IssueList from './pages/IssueList';
 import IssueDetail from './pages/IssueDetail';
 import Profile from './pages/Profile';
+import ContributionTracker from './pages/ContributionTracker';
+import GitCinema from './pages/GitCinema';
 import GlobalChatCopilot from './components/GlobalChatCopilot';
 import { getAuthToken, setAuthToken, logout, isAuthenticated, getAuthUrl } from './services/api';
 
@@ -100,6 +102,23 @@ function HeaderContent({ loggedIn, setLoggedIn }: { loggedIn: boolean; setLogged
         </NavLink>
 
         <NavLink
+          to="/tracker"
+          className={({ isActive }: { isActive: boolean }) => isActive ? "nav-link active" : "nav-link"}
+        >
+          <GitPullRequest size={17} />
+          Tracker
+        </NavLink>
+
+        <NavLink
+          to="/cinema"
+          className={({ isActive }: { isActive: boolean }) => isActive ? "nav-link active" : "nav-link"}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <Film size={17} color="#FFF4B7" />
+          Git Cinema
+        </NavLink>
+
+        <NavLink
           to="/profile"
           className={({ isActive }: { isActive: boolean }) => isActive ? "nav-link active" : "nav-link"}
         >
@@ -155,27 +174,40 @@ function HeaderContent({ loggedIn, setLoggedIn }: { loggedIn: boolean; setLogged
   );
 }
 
-export default function App(): React.ReactElement {
-  const [loggedIn, setLoggedIn] = useState<boolean>(isAuthenticated());
+function AppBody({ loggedIn, setLoggedIn }: { loggedIn: boolean; setLoggedIn: (val: boolean) => void }) {
+  const location = useLocation();
+  const isCinema = location.pathname === '/cinema';
 
   return (
-    <Router>
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <HeaderContent loggedIn={loggedIn} setLoggedIn={setLoggedIn} />
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflow: isCinema ? 'hidden' : 'visible' }}>
+      <HeaderContent loggedIn={loggedIn} setLoggedIn={setLoggedIn} />
 
-        {/* Page Content */}
-        <main style={{ flex: 1, padding: '32px 32px 48px 32px', maxWidth: '1280px', margin: '0 auto', width: '100%' }}>
-          <Routes>
-            <Route path="/" element={<Login loggedIn={loggedIn} setLoggedIn={setLoggedIn} />} />
-            <Route path="/login" element={<Login loggedIn={loggedIn} setLoggedIn={setLoggedIn} />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/issues" element={<IssueList />} />
-            <Route path="/issues/:id" element={<IssueDetail />} />
-            <Route path="/profile" element={<Profile setLoggedIn={setLoggedIn} />} />
-          </Routes>
-        </main>
+      {/* Page Content */}
+      <main style={{
+        flex: 1,
+        padding: isCinema ? 0 : '32px 32px 48px 32px',
+        maxWidth: isCinema ? '100%' : '1280px',
+        margin: '0 auto',
+        width: '100%',
+        height: isCinema ? 'calc(100vh - 72px)' : 'auto',
+        overflow: isCinema ? 'hidden' : 'visible',
+        position: 'relative'
+      }}>
+        <Routes>
+          <Route path="/" element={<Login loggedIn={loggedIn} setLoggedIn={setLoggedIn} />} />
+          <Route path="/login" element={<Login loggedIn={loggedIn} setLoggedIn={setLoggedIn} />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/issues" element={<IssueList />} />
+          <Route path="/issues/:id" element={<IssueDetail />} />
+          <Route path="/tracker" element={<ContributionTracker />} />
+          <Route path="/status" element={<ContributionTracker />} />
+          <Route path="/cinema" element={<GitCinema />} />
+          <Route path="/profile" element={<Profile setLoggedIn={setLoggedIn} />} />
+        </Routes>
+      </main>
 
-        {/* Global Footer */}
+      {/* Global Footer (hidden on cinema for full-screen immersive view) */}
+      {!isCinema && (
         <footer style={{
           borderTop: '1px solid rgba(0, 106, 103, 0.28)',
           background: 'rgba(2, 5, 14, 0.95)',
@@ -200,10 +232,20 @@ export default function App(): React.ReactElement {
             </div>
           </div>
         </footer>
+      )}
 
-        {/* Global AI Copilot Chat pinned to bottom right corner */}
-        <GlobalChatCopilot />
-      </div>
+      {/* Global AI Copilot Chat */}
+      <GlobalChatCopilot />
+    </div>
+  );
+}
+
+export default function App(): React.ReactElement {
+  const [loggedIn, setLoggedIn] = useState<boolean>(isAuthenticated());
+
+  return (
+    <Router>
+      <AppBody loggedIn={loggedIn} setLoggedIn={setLoggedIn} />
     </Router>
   );
 }

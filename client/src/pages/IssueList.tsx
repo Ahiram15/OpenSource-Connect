@@ -1,6 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchRecommendations, fetchUserProfile, IssueItem, UserProfile } from '../services/api';
+import {
+  Terminal,
+  Bookmark,
+  Copy,
+  Check,
+  ExternalLink,
+  Sparkles,
+  Code2,
+  GitPullRequest,
+  Filter,
+  CheckCircle2,
+  ArrowUpRight
+} from 'lucide-react';
+import {
+  fetchRecommendations,
+  fetchUserProfile,
+  IssueItem,
+  UserProfile,
+  getCachedContributions,
+  saveContributions,
+  ContributionItem
+} from '../services/api';
+
+const POPULAR_LANGUAGES = [
+  'All',
+  'TypeScript',
+  'JavaScript',
+  'Python',
+  'Go',
+  'Rust',
+  'Java',
+  'C++',
+  'React',
+  'Node'
+];
+
+const POPULAR_LABELS = [
+  'good first issue',
+  'help wanted',
+  'documentation',
+  'first-timers-only',
+  'bug',
+  'enhancement'
+];
 
 export default function IssueList(): React.ReactElement {
   const navigate = useNavigate();
@@ -13,6 +56,19 @@ export default function IssueList(): React.ReactElement {
   const [loading, setLoading] = useState<boolean>(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAutoMatched, setIsAutoMatched] = useState<boolean>(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [trackedMap, setTrackedMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    // Load currently tracked issues to reflect saved status
+    const cached = getCachedContributions();
+    const map: Record<string, boolean> = {};
+    cached.forEach(c => {
+      map[c.issueUrl] = true;
+      map[c.id] = true;
+    });
+    setTrackedMap(map);
+  }, []);
 
   useEffect(() => {
     fetchUserProfile()
@@ -51,6 +107,43 @@ export default function IssueList(): React.ReactElement {
       setSelectedDifficulty('good first issue');
       setIsAutoMatched(true);
     }
+  };
+
+  const handleToggleTrack = (issue: IssueItem): void => {
+    const cached = getCachedContributions();
+    const issueKey = issue.url || issue.id;
+    const isAlreadyTracked = !!trackedMap[issueKey] || !!trackedMap[issue.id];
+
+    if (isAlreadyTracked) {
+      const updated = cached.filter(c => c.issueUrl !== issue.url && c.id !== issue.id && c.id !== `tracked-${issue.id}`);
+      saveContributions(updated);
+      setTrackedMap(prev => ({ ...prev, [issueKey]: false, [issue.id]: false, [`tracked-${issue.id}`]: false }));
+    } else {
+      const parts = issue.repository.split('/');
+      const newItem: ContributionItem = {
+        id: `tracked-${issue.id}`,
+        repoOwner: parts[0] || 'community',
+        repoName: parts[1] || issue.repository,
+        repository: issue.repository,
+        issueTitle: issue.title,
+        issueUrl: issue.url || `https://github.com/${issue.repository}`,
+        status: 'saved',
+        isAssigned: false,
+        labels: issue.labels,
+        language: selectedLanguage !== 'All' ? selectedLanguage : undefined,
+        updatedAt: 'Just now'
+      };
+      const updated = [newItem, ...cached];
+      saveContributions(updated);
+      setTrackedMap(prev => ({ ...prev, [issueKey]: true, [issue.id]: true, [`tracked-${issue.id}`]: true }));
+    }
+  };
+
+  const handleCopyUrl = (issue: IssueItem): void => {
+    const url = issue.url || `https://github.com/${issue.repository}`;
+    navigator.clipboard.writeText(url);
+    setCopiedId(issue.id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   // Filter and Sort issues
@@ -272,12 +365,86 @@ export default function IssueList(): React.ReactElement {
       </div>
 
       {/* Issue Cards Feed */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px', minWidth: '320px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', minWidth: '320px' }}>
+
+        {/* Curated Language & Ecosystem Bar (Inspired by FirstIssue.dev) */}
+        <div className="glass-panel" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <span style={{ fontSize: '0.74rem', color: '#FFF4B7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Code2 size={14} color="#FFF4B7" />
+              Curated Ecosystems
+            </span>
+            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+              Click to instantly filter issues
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+            {POPULAR_LANGUAGES.map((lang) => {
+              const isSelected = (lang === 'All' && selectedLanguage === 'All') || selectedLanguage.toLowerCase() === lang.toLowerCase();
+              return (
+                <button
+                  key={lang}
+                  onClick={() => {
+                    setSelectedLanguage(lang);
+                    setIsAutoMatched(false);
+                  }}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    fontSize: '0.78rem',
+                    fontWeight: 650,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    border: isSelected ? '1px solid #FFF4B7' : '1px solid rgba(0, 106, 103, 0.3)',
+                    background: isSelected ? 'linear-gradient(135deg, rgba(0, 106, 103, 0.5) 0%, rgba(255, 244, 183, 0.15) 100%)' : 'rgba(2, 5, 14, 0.6)',
+                    color: isSelected ? '#FFF4B7' : '#cbd5e1',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {lang}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Quick Difficulty Pills */}
+          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingTop: '4px', borderTop: '1px solid rgba(0, 106, 103, 0.2)' }}>
+            {POPULAR_LABELS.map((lbl) => {
+              const isSelected = selectedDifficulty === lbl;
+              return (
+                <button
+                  key={lbl}
+                  onClick={() => {
+                    setSelectedDifficulty(lbl);
+                    setIsAutoMatched(false);
+                  }}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    fontSize: '0.72rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    border: isSelected ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
+                    background: isSelected ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                    color: isSelected ? '#38bdf8' : '#94a3b8',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  #{lbl}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Results Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#ffffff', margin: 0, letterSpacing: '-0.03em', fontFamily: 'Sora, sans-serif' }}>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#ffffff', margin: 0, letterSpacing: '-0.02em', fontFamily: 'Sora, sans-serif' }}>
             Recommended Issues ({filteredIssues.length})
           </h2>
-          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', backgroundColor: 'rgba(25, 25, 30, 0.4)', border: '1px solid rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: '20px', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '0.7rem', color: '#cbd5e1', backgroundColor: 'rgba(0, 106, 103, 0.25)', border: '1px solid rgba(0, 106, 103, 0.4)', padding: '4px 12px', borderRadius: '20px', fontFamily: 'JetBrains Mono, monospace' }}>
             {selectedLanguage} • {selectedDifficulty}
           </span>
         </div>
@@ -292,23 +459,25 @@ export default function IssueList(): React.ReactElement {
             No matching issues found for selected filters. Try changing language or labels.
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             {filteredIssues.map((issue: IssueItem) => {
               const githubUrl = issue.url || `https://github.com/${issue.repository}`;
               const diffTheme = getDifficultyTheme(issue.difficulty);
+              const isTracked = !!trackedMap[issue.url || ''] || !!trackedMap[issue.id] || !!trackedMap[`tracked-${issue.id}`];
+              const isCopied = copiedId === issue.id;
 
               return (
                 <div
                   key={issue.id}
-                  className="glass-panel"
+                  className="glass-panel hover-card"
                   style={{
-                    padding: '32px',
+                    padding: '24px 28px',
                     display: 'flex',
                     flexDirection: 'row',
                     flexWrap: 'wrap',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    gap: '24px',
+                    gap: '20px',
                     position: 'relative',
                     overflow: 'hidden'
                   }}
@@ -318,9 +487,9 @@ export default function IssueList(): React.ReactElement {
                     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: 'linear-gradient(180deg, #006A67, #FFF4B7)' }} />
                   )}
 
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '280px' }}>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '280px' }}>
                     {/* Repository, Stars & Badges */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
                       <a
                         href={`https://github.com/${issue.repository}`}
                         target="_blank"
@@ -334,10 +503,14 @@ export default function IssueList(): React.ReactElement {
                           borderRadius: '6px',
                           fontFamily: 'JetBrains Mono, monospace',
                           fontWeight: 700,
-                          textDecoration: 'none'
+                          textDecoration: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
                         }}
                       >
-                        {issue.repository} ↗
+                        {issue.repository}
+                        <ArrowUpRight size={11} />
                       </a>
 
                       <span style={{ fontSize: '0.72rem', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -376,15 +549,15 @@ export default function IssueList(): React.ReactElement {
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ color: '#ffffff', textDecoration: 'none', transition: 'color 0.2s' }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = '#FFF4B7'}
-                        onMouseLeave={(e) => e.currentTarget.style.color = '#ffffff'}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#FFF4B7')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#ffffff')}
                       >
                         {issue.title}
                       </a>
                     </h3>
 
                     {/* Explanation Description */}
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: '1.6', margin: 0 }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.86rem', lineHeight: '1.55', margin: 0 }}>
                       {issue.explanation}
                     </p>
 
@@ -397,10 +570,10 @@ export default function IssueList(): React.ReactElement {
                             fontSize: '0.68rem',
                             fontFamily: 'JetBrains Mono, monospace',
                             color: 'var(--text-dim)',
-                            backgroundColor: 'rgba(255,255,255,0.02)',
-                            border: '1px solid rgba(255,255,255,0.04)',
-                            padding: '1px 6px',
-                            borderRadius: '3px'
+                            backgroundColor: 'rgba(255,255,255,0.03)',
+                            border: '1px solid rgba(255,255,255,0.07)',
+                            padding: '2px 6px',
+                            borderRadius: '4px'
                           }}
                         >
                           #{label}
@@ -410,49 +583,97 @@ export default function IssueList(): React.ReactElement {
                   </div>
 
                   {/* Match Score Indicator & Action Column */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px', minWidth: '150px', justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px', minWidth: '160px', justifyContent: 'flex-end' }}>
 
                     {/* Compact Match Score Orb */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
                       <div style={{ width: '44px', height: '44px', borderRadius: '50%', border: '1px solid rgba(255, 244, 183, 0.4)', backgroundColor: 'rgba(0, 106, 103, 0.25)', color: '#FFF4B7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.82rem', fontWeight: 800, fontFamily: 'Sora, sans-serif' }}>
                         {issue.matchScore}%
                       </div>
-                      <span style={{ fontSize: '0.65rem', color: '#FFF4B7', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>Match</span>
+                      <span style={{ fontSize: '0.62rem', color: '#FFF4B7', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>Match</span>
                     </div>
 
-                    {/* Navigation Buttons */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* Action Buttons Column */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <button
                         onClick={() => navigate(`/issues/${issue.id}`, { state: { issue } })}
                         className="btn-primary"
                         style={{
-                          padding: '8px 16px',
+                          padding: '7px 14px',
                           fontSize: '0.78rem',
                           borderRadius: '6px',
                           border: 'none',
                           cursor: 'pointer',
-                          fontWeight: 650,
+                          fontWeight: 700,
                           textAlign: 'center',
-                          justifyContent: 'center'
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px'
                         }}
                       >
-                        Roadmap →
+                        <Sparkles size={13} />
+                        AI Roadmap
                       </button>
 
                       <button
                         onClick={() => openCodespaces(issue.repository)}
                         className="btn-secondary"
                         style={{
-                          padding: '8px 16px',
+                          padding: '7px 14px',
                           fontSize: '0.78rem',
                           borderRadius: '6px',
                           cursor: 'pointer',
                           fontWeight: 650,
                           textAlign: 'center',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                      >
+                        <Terminal size={13} />
+                        Codespace
+                      </button>
+
+                      {/* Track / Saved Toggle */}
+                      <button
+                        onClick={() => handleToggleTrack(issue)}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '0.74rem',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          background: isTracked ? 'rgba(251, 191, 36, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                          color: isTracked ? '#fbbf24' : '#94a3b8',
+                          border: `1px solid ${isTracked ? 'rgba(251, 191, 36, 0.4)' : 'rgba(255, 255, 255, 0.08)'}`
+                        }}
+                      >
+                        <Bookmark size={12} fill={isTracked ? '#fbbf24' : 'none'} />
+                        {isTracked ? 'Tracked' : 'Track Issue'}
+                      </button>
+
+                      {/* Quick Copy Link */}
+                      <button
+                        onClick={() => handleCopyUrl(issue)}
+                        style={{
+                          padding: '4px 10px',
+                          fontSize: '0.7rem',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          background: 'transparent',
+                          color: isCopied ? '#10b981' : '#64748b',
+                          border: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
                           justifyContent: 'center'
                         }}
                       >
-                        Codespace
+                        {isCopied ? <Check size={11} /> : <Copy size={11} />}
+                        {isCopied ? 'Link Copied' : 'Copy Link'}
                       </button>
                     </div>
                   </div>
