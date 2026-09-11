@@ -171,14 +171,16 @@ export default function GlobalChatCopilot(): React.ReactElement {
 
   const suggestionChips = isIssuePage
     ? [
-        { text: '🧭 Where should I start?', message: 'Where should I look in the codebase to start fixing this issue?' },
-        { text: '📐 Explain architecture', message: 'Can you explain the high-level architecture and how this feature works?' },
-        { text: '🧪 How do I test this?', message: 'What test commands or test cases should I run to verify my fix?' }
+        { text: '🧭 Where in codebase do I start?', message: 'Where should I look in the codebase to start fixing this issue, and what files are relevant?' },
+        { text: '📝 Draft PR description for maintainers', message: 'Can you draft a clean, professional Pull Request title and description for this issue?' },
+        { text: '📐 Explain architecture & design', message: 'Can you explain the high-level architecture and how this module works?' },
+        { text: '🧪 How do I test & verify my fix?', message: 'What test commands or verification steps should I run to test this locally?' }
       ]
     : [
-        { text: '🚀 How to pick good first issues?', message: 'How do I choose the best first issue based on my skills?' },
-        { text: '🌿 Git Pull Request Workflow', message: 'What is the step-by-step Git workflow to submit my first open source PR?' },
-        { text: '⚡ Explain Match Scores', message: 'How does OpenSource Connect calculate repository match accuracy?' }
+        { text: '🚀 Guide me through my first PR', message: 'Give me a step-by-step beginner guide to finding an issue, cloning a repo, creating a branch, and opening a PR.' },
+        { text: '📝 How to write a great PR description?', message: 'What makes a maintainer-approved PR description and what checklist items should I always include?' },
+        { text: '📊 How to use the Contribution Tracker?', message: 'How do I use OpenSource Connect to track my open source PR pipeline and build a proof-of-work portfolio?' },
+        { text: '🌿 Git commands for fork & rebase', message: 'Show me the exact terminal commands to fork, clone, create a feature branch, and sync with upstream main.' }
       ];
 
   return (
