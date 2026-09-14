@@ -1,152 +1,209 @@
-# **OpenSource Connect**
+# **OpenSource Connect** 🚀
 
-> **Live Deployment:** [open-source-connect-five.vercel.app](https://open-source-connect-five.vercel.app/)
+> **Live Deployment:** [open-source-connect-five.vercel.app](https://open-source-connect-five.vercel.app/)  
+> **Repository:** [github.com/Ahiram15/OpenSource-Connect](https://github.com/Ahiram15/OpenSource-Connect)
 
-**OpenSource Connect** is an AI-powered web platform designed to simplify the process of contributing to open-source software. Many developers, especially beginners, struggle to find GitHub issues that match their technical skills and experience. Searching through thousands of repositories and understanding issue requirements can be time-consuming and discouraging.
-
-This platform addresses that problem by intelligently recommending suitable GitHub issues based on a developer's profile, skills, interests, and previous contributions.
+**OpenSource Connect** is an AI-powered developer intelligence platform designed to bridge the gap between open-source repositories and aspiring or experienced contributors. Finding suitable issues across millions of GitHub repositories can be daunting. OpenSource Connect eliminates this friction by analyzing your public GitHub profile, extracting your technical stack and experience level, and providing AI-scored issue recommendations, interactive learning roadmaps, real-time contribution tracking, visual git history simulations, and automated email alerts.
 
 ---
 
-## 🚀 Key Features
+## 🌟 Key Highlights & Core Features
 
-* **GitHub Authentication (OAuth)**: Secure sign-in to parse your public profile and technical details.
-* **GitHub Profile Analysis**: Analyzes your programming languages, repositories, and contribution history.
-* **AI-Powered Recommendation Engine**: Generates tailored issue recommendations and custom **Match Scores (%)** using Google Gemini.
-* **AI Learning Roadmaps**: Bridges knowledge gaps by generating step-by-step learning milestones and estimated completion times for recommended issues.
-* **Dashboard Analytics**: Tracks your bookmarked issues, active pull requests, and ongoing contribution progress.
-* **Advanced Filters**: Search and sort issues by language, difficulty levels (e.g., *good first issue*), and repository popularity.
+### 1. 🤖 AI-Powered Issue Recommendation & Match Scoring
+* **Google Gemini AI Integration (`gemini-2.5-flash` / `gemini-2.0-flash`)**: Analyzes issue descriptions against your GitHub skill profile to generate customized **Match Scores (0–100%)**, concise explanations, difficulty ratings, and estimated completion times.
+* **Knowledge Gap Detection & Step-by-Step Roadmaps**: Pinpoints concepts you need to learn and provides milestone checklists to guide your pull request from reproduction to merge.
+* **Multi-Tier Resilient Heuristic Fallback**: Automatic failover ensuring 100% uptime even during rate limits or offline development.
+
+### 2. 📊 Live Contribution Tracker & GitHub Pipeline Sync (`/tracker`)
+* **5-Stage Visual Kanban Pipeline**: Track issues through *Identified (AI Matched)* ➔ *In Progress* ➔ *Draft PR Opened* ➔ *In Code Review* ➔ *Merged & Shipped*.
+* **Live GitHub Polling & Sync**: Automatically synchronizes your active GitHub PRs, issues, and commits into interactive lifecycle cards.
+* **Milestone Notes & XP Progression**: Add custom dev notes, track time spent, log branch names, and calculate your open-source impact metrics.
+
+### 3. 🎬 Git Cinema — Interactive Codebase Replay Theater (`/cinema`)
+* **2D Canvas Graph Engine**: Interactive visual playback of commit histories, branch splits, merge ripple effects, and particle animations.
+* **Web Audio API Synthesizer**: Generates dynamic musical and sci-fi audio cues synced with commit types and merge actions.
+* **Historic Presets & Live Ingestion**: Replay milestone repositories (Linux Kernel v0.01, React 16 Fiber Rewrite, Bitcoin Genesis, Next.js App Router) or load any public GitHub repository.
+
+### 4. ✉️ SMTP Email Notification Hub & Automated Alerts (`/profile#email-hub`)
+* **Nodemailer SMTP Integration**: Real-world delivery configured via Gmail or custom SMTP hosts.
+* **Curated Dark-Mode HTML Templates**:
+  * **Weekly Issue Match Digest**: Top matching issues delivered directly to your inbox with match % tags.
+  * **PR Merged Celebration**: Confetti-themed milestone celebration emails with repository statistics.
+  * **System Health & Test Dispatch**: 1-click test email dispatch to verify SMTP delivery instantly.
+* **In-App Preferences & Global Contact Modal**: Toggle notification preferences and submit feedback via the global contact modal.
+
+### 5. 💬 Global AI Copilot Assistant
+* **Floating Context-Aware Copilot**: Accessible across every page (`GlobalChatCopilot.tsx`) for instant Git advice, PR starter code drafts, architecture hints, and contribution guidance.
+
+### 6. 📄 Proof-of-Work Vector PDF Export & Public Portfolios
+* **1-Click High-Resolution PDF Export**: Export an authenticated, employer-ready open-source contribution resume directly from your Dashboard.
+* **Shareable Portfolio URLs**: Share your developer profile and stats with peers and recruiters via `/dashboard?user=<username>`.
 
 ---
 
 ## 🛠️ Technology Stack
 
-* **Frontend**: React.js, Tailwind CSS, Recharts
-* **Backend**: Node.js, Express.js
-* **Database**: MongoDB
-* **APIs**: GitHub REST & GraphQL API, Google Gemini API
+| Layer | Technologies |
+|---|---|
+| **Frontend** | React 18, TypeScript, Vite 5, Tailwind CSS, Lucide React, Recharts, Canvas API, Web Audio API |
+| **Backend** | Node.js, Express.js, TypeScript, Mongoose, Nodemailer, Dotenv, CORS |
+| **Database** | MongoDB Atlas (with non-blocking in-memory dev fallback) |
+| **AI / LLM** | Google Gemini API (`@google/generative-ai`), Heuristic Match Engine |
+| **APIs & Protocols** | GitHub REST API v3, GitHub OAuth 2.0, SMTP (Gmail / Custom) |
+| **Deployment** | Vercel (Frontend & Serverless Backend), Cloudflare Tunnels (Dev Tunneling) |
 
 ---
 
 ## 💻 Getting Started
 
 ### 1. Prerequisites
-Make sure you have [Node.js](https://nodejs.org/) and [MongoDB](https://www.mongodb.com/) installed on your system.
+* [Node.js (v18+)](https://nodejs.org/)
+* [MongoDB Atlas Account](https://www.mongodb.com/) or local MongoDB instance
+* [GitHub Developer App](https://github.com/settings/developers) (for OAuth Client ID & Secret)
+* [Google AI Studio Key](https://aistudio.google.com/) (for Gemini API)
 
-### 2. Installation
-Clone the repository:
+### 2. Clone the Repository
 ```bash
 git clone https://github.com/Ahiram15/OpenSource-Connect.git
 cd OpenSource-Connect
 ```
 
-### 3. Environment Configuration
-Create a `.env` file in the `server` directory with the following variables:
+### 3. Backend Environment Setup
+Create a `.env` file in the `server` directory:
 ```env
 PORT=5000
-MONGODB_URI=your_mongodb_connection_string
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/opensource-connect?retryWrites=true&w=majority
 GITHUB_CLIENT_ID=your_github_oauth_client_id
 GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
-GEMINI_API_KEY=your_google_gemini_api_key
-JWT_SECRET=your_jwt_signing_secret
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
+JWT_SECRET=your_jwt_signing_secret_here
+
+# SMTP Email Configuration (Optional - falls back to dev simulation mode if omitted)
+SMTP_SERVICE=gmail
+SMTP_USER=your_email@gmail.com
+SMTP_PASS="your_gmail_app_password"
+SMTP_FROM="OpenSource Connect <your_email@gmail.com>"
 ```
 
-### 4. Running the Backend Server
-Navigate to the `server` directory, install dependencies, and run the developer dev server:
+### 4. Run the Development Environment
+
+#### Backend Server
 ```bash
 cd server
 npm install
 npm run dev
 ```
-The server will start on `http://localhost:5000`.
+*Server starts on `http://localhost:5000`.*
 
-### 5. Running the Frontend Client
-Navigate to the `client` directory, install dependencies, and start the Vite dev server:
+#### Frontend Client
 ```bash
 cd client
 npm install
 npm run dev
 ```
-The client will start on `http://localhost:5173`.
+*Client starts on `http://localhost:5173`.*
 
 ---
 
-## 🧠 System Architecture & High-Level Data Flow
-
-When a developer interacts with **OpenSource Connect**, data flows through 5 distinct layers:
+## 🧠 System Architecture & Data Flow
 
 ```
-[User Browser] 
-    │
-    ▼ (1. Clicks "Log in with GitHub")
-[GitHub OAuth 2.0] ──► Redirects back to Backend Callback
-                            │
-                            ▼ (2. Parses Repos & Languages)
-                  [githubService.ts] ──► Computes language breakdown %
-                            │
-                            ▼ (3. Saves Profile)
-                 [MongoDB Atlas Database]
-                            │
-                            ▼ (4. Fetches Issues + Calls Gemini AI)
-                 [geminiService.ts] (gemini-2.0-flash)
-                            │
-                            ▼ (5. Returns Scored JSON to React UI)
-                  [React Frontend Client]
+[ Developer Browser ]
+       │
+       ▼ (1. Authenticate with GitHub OAuth 2.0)
+[ GitHub OAuth Gateway ] ──► Exchanges authorization code for JWT session
+       │
+       ▼ (2. Extract Repos, Languages, Topics & Experience)
+[ githubService.ts ] ──► Aggregates language weights & developer benchmarks
+       │
+       ▼ (3. Store Profile & Cache Issues)
+[ MongoDB Atlas Database ]
+       │
+       ├────────────────────────────────────────┬───────────────────────────────────────┐
+       ▼ (4. AI Match Analysis)                 ▼ (5. Git Cinema Canvas)                ▼ (6. SMTP Alerts)
+[ geminiService.ts ]                      [ GitCinema.tsx ]                      [ emailService.ts ]
+  - Issue Match Scoring (0-100%)            - 2D Canvas Branch Renderer            - Issue Digest Dispatch
+  - Learning Roadmaps & Knowledge Gaps      - Web Audio Synth Cues                 - PR Merged Celebrations
+  - Global Copilot Guidance                 - Git History Playback                 - Contact & Support Relay
+       │
+       ▼ (7. Render Dynamic Developer Workspace)
+[ React 18 + TypeScript UI ] (Dashboard, Issue Feed, Tracker, Git Cinema, Profile)
 ```
 
 ---
 
-## 🎨 Frontend Client Implementation (`/client`)
+## 📂 Project Structure
 
-### A. Environment & Vite Configuration ([client/vite.config.js](file:///d:/Projects/OpenSource-Connect/client/vite.config.js))
-- Vite configuration includes `server: { allowedHosts: true, host: true }` in `vite.config.js` to allow accepting HTTP requests from any hostname (local or tunneled via Cloudflare) while maintaining Hot Module Replacement (HMR).
-
-### B. Type Definitions ([client/src/types/index.ts](file:///d:/Projects/OpenSource-Connect/client/src/types/index.ts))
-- Standardized TypeScript interfaces for:
-  - `UserProfile`: `githubId`, `username`, `avatarUrl`, `technicalInterests`, `languageBreakdown`, `experienceLevel`, `savedIssueIds`.
-  - `IssueItem`: `id`, `title`, `repository`, `stars`, `labels`, `matchScore`, `explanation`, `difficulty`, `estimatedTime`, `knowledgeGaps`, `roadmap`, `url`.
-
-### C. Re-designed Dashboard ([client/src/pages/Dashboard.tsx](file:///d:/Projects/OpenSource-Connect/client/src/pages/Dashboard.tsx))
-- On load, `fetchUserProfile()` loads the user's profile information.
-- If the user meets the `REPO_BENCHMARK = 3` public repository threshold, their actual GitHub repository activity, top projects sorted by stars, actual follower/following counts, and dynamically calculated achievements are loaded. If not, it falls back to a clean mock portfolio.
-- Displays language breakdown percentages as a list of **Horizontal Bar Progress Cards** with gradient fills.
-- Renders a complete tag list of all extracted technical skills and repository topics at the bottom.
-
-### D. Search & Filters Feed ([client/src/pages/IssueList.tsx](file:///d:/Projects/OpenSource-Connect/client/src/pages/IssueList.tsx))
-- **`⚡ Auto-Select My GitHub Skills`**: Resolves the user's #1 extracted language and automatically applies it to the active filter state.
-- **Manual Filters**: Provides advanced filters for language, difficulty levels, and match score thresholds.
-- **Direct Link Redirections**: Deep-links to GitHub issues and repository main pages.
-
-### E. Profile Customization ([client/src/pages/Profile.tsx](file:///d:/Projects/OpenSource-Connect/client/src/pages/Profile.tsx))
-- Offers inline editing of display names, custom skill badge additions, focus target domains (Frontend, Backend, DevOps, AI/ML), and saving updates securely to the database.
+```
+OpenSource-Connect/
+├── client/                               # Frontend React + TypeScript Application
+│   ├── src/
+│   │   ├── components/
+│   │   │   └── GlobalChatCopilot.tsx     # Context-aware floating AI Copilot
+│   │   ├── pages/
+│   │   │   ├── Dashboard.tsx             # Main dashboard, portfolio, PDF export & widgets
+│   │   │   ├── IssueList.tsx             # AI-filtered issue search feed
+│   │   │   ├── IssueDetail.tsx           # Issue deep-dive, roadmaps & PR starters
+│   │   │   ├── ContributionTracker.tsx   # 5-stage live contribution lifecycle tracker
+│   │   │   ├── GitCinema.tsx             # Interactive 2D canvas & audio git replay
+│   │   │   ├── Profile.tsx               # Developer profile, custom skills & Email Hub
+│   │   │   └── Login.tsx                 # OAuth landing page & showcase
+│   │   ├── services/
+│   │   │   └── api.ts                    # Typed API client with JWT interceptors
+│   │   ├── types/
+│   │   │   └── index.ts                  # Shared TypeScript models
+│   │   ├── App.tsx                       # App router, nav header & global feedback modal
+│   │   └── main.tsx                      # Vite React entry point
+│   ├── index.html
+│   ├── package.json
+│   └── vite.config.ts
+│
+├── server/                               # Backend Node.js + Express API
+│   ├── src/
+│   │   ├── config/
+│   │   │   └── db.ts                     # Resilient MongoDB Atlas connector
+│   │   ├── controllers/
+│   │   │   ├── authController.ts         # GitHub OAuth 2.0 & JWT issuance
+│   │   │   ├── emailController.ts        # SMTP status, digests & PR celebrations
+│   │   │   ├── issueController.ts        # AI issue recommendation handlers
+│   │   │   └── userController.ts         # Profile & preference management
+│   │   ├── middleware/
+│   │   │   └── authMiddleware.ts         # JWT bearer authentication
+│   │   ├── models/
+│   │   │   ├── User.ts                   # User profile & skill breakdown schema
+│   │   │   └── Issue.ts                  # Issue cache & match metadata schema
+│   │   ├── routes/
+│   │   │   ├── authRoutes.ts             # /api/auth routes
+│   │   │   ├── emailRoutes.ts            # /api/email routes
+│   │   │   ├── issueRoutes.ts            # /api/issues routes
+│   │   │   └── userRoutes.ts             # /api/user routes
+│   │   ├── services/
+│   │   │   ├── emailService.ts           # Nodemailer transport & HTML email templates
+│   │   │   ├── geminiService.ts          # Google Gemini AI match & copilot engine
+│   │   │   └── githubService.ts          # GitHub REST API aggregator
+│   │   └── index.ts                      # Express application entrypoint
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── README.md                             # Project overview & quickstart
+└── TECHNICAL_SYSTEM_DOCUMENTATION.md     # Deep-dive architecture & implementation guide
+```
 
 ---
 
-## ⚙️ Backend Server Architecture (`/server`)
-
-### A. Express Server Entrypoint ([server/src/index.ts](file:///d:/Projects/OpenSource-Connect/server/src/index.ts))
-- Configured with security middleware (CORS, JSON parsers) and maps `/api/auth`, `/api/user`, and `/api/issues` router scopes.
-
-### B. Non-Blocking Database Connection ([server/src/config/db.ts](file:///d:/Projects/OpenSource-Connect/server/src/config/db.ts))
-- Establishes a connection to MongoDB Atlas. If unreachable (offline mode), it catches the exception and falls back to a in-memory database to allow development to continue immediately.
-
-### C. Mongoose Schemas ([server/src/models/User.ts](file:///d:/Projects/OpenSource-Connect/server/src/models/User.ts) & [Issue.ts](file:///d:/Projects/OpenSource-Connect/server/src/models/Issue.ts))
-- Defines database schema types for users and cached AI-matched issues.
+## 🔒 Security & Best Practices
+* **OAuth 2.0 & JWT Security**: Secure authorization code exchange with standard JWT tokens (7-day validity).
+* **Safe Credential Management**: Environment variables isolation with zero hardcoded secret leakage.
+* **Robust Error Handling**: Non-blocking database connectors, fallback AI engines, and SMTP simulation failovers protect the user experience from API interruptions.
+* **CORS & Tunnel Support**: Configured for local development, Vercel deployments, and Cloudflare tunnel domains.
 
 ---
 
-## 🤖 AI Match Engine & GitHub Skill Extraction Service
-
-### A. GitHub Skill & Language Extraction ([server/src/services/githubService.ts](file:///d:/Projects/OpenSource-Connect/server/src/services/githubService.ts))
-- Function `extractUserSkills` requests user public repos, aggregates language weights, parses topics/tags, and determines experience levels dynamically based on the total repository count.
-
-### B. Google Gemini 2.0 Flash AI Scoring ([server/src/services/geminiService.ts](file:///d:/Projects/OpenSource-Connect/server/src/services/geminiService.ts))
-- Function `analyzeIssueWithGemini` uses Google Generative AI SDK targeting **`gemini-2.0-flash`** to analyze alignment, calculate a custom match score, identify knowledge gaps, and design a step-by-step roadmap checklist.
+## 📜 License
+Distributed under the **MIT License**. See `LICENSE` for more information.
 
 ---
 
-## 🔐 GitHub OAuth 2.0 & JWT Security Flow
-
-- **[server/src/controllers/authController.ts](file:///d:/Projects/OpenSource-Connect/server/src/controllers/authController.ts)**:
-  - **`githubLogin`**: Redirects users to GitHub's authorization endpoint.
-  - **`githubCallback`**: Exchanges authorization codes for access tokens, loads user metadata, extracts skills, saves profiles, and issues signed JWT authorization tokens (valid for 7 days) back to the client.
+## 🤝 Contributing
+Contributions are welcome! Please check out the [Issue Feed](https://open-source-connect-five.vercel.app/issues) or submit a Pull Request following standard GitHub flow.
