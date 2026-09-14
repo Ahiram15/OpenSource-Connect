@@ -19,6 +19,16 @@ app.set('trust proxy', true);
 app.use(cors());
 app.use(express.json());
 
+// Auto-connect DB middleware for serverless invocations (non-blocking)
+app.use(async (_req, _res, next) => {
+  try {
+    await connectDB();
+  } catch (_err) {
+    // Non-blocking, continue even if DB connection fails
+  }
+  next();
+});
+
 // Health Check Endpoint
 app.get('/api/health', (req: Request, res: Response) => {
   res.status(200).json({
