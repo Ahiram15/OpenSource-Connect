@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile, UserProfile, fetchUserReposFromGitHub, GitHubRepo } from '../services/api';
+import {
+  fetchUserProfile,
+  UserProfile,
+  fetchUserReposFromGitHub,
+  GitHubRepo,
+  ContributionItem,
+  ContributionStatus,
+  getCachedContributions,
+  fetchLiveContributions
+} from '../services/api';
 import { generateDeveloperPortfolioPDF } from '../utils/pdfExport';
 import {
   Code2,
@@ -25,7 +34,11 @@ import {
   Copy,
   Check,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Play,
+  RefreshCw,
+  Layers,
+  Activity
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
@@ -172,6 +185,7 @@ const getRelativeTime = (dateStr: string): string => {
 };
 
 export default function Dashboard(): React.ReactElement {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [mounted, setMounted] = useState<boolean>(false);
@@ -181,6 +195,8 @@ export default function Dashboard(): React.ReactElement {
   const [copiedMarkdown, setCopiedMarkdown] = useState<boolean>(false);
   const [isPublicView, setIsPublicView] = useState<boolean>(false);
   const [exportingPDF, setExportingPDF] = useState<boolean>(false);
+  const [contributions, setContributions] = useState<ContributionItem[]>([]);
+  const [syncingContributions, setSyncingContributions] = useState<boolean>(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -240,9 +256,29 @@ export default function Dashboard(): React.ReactElement {
         .catch((err) => console.error('Failed to load dashboard profile:', err));
     }
 
+    // Load initial contributions from local cache
+    try {
+      const cachedConts = getCachedContributions();
+      setContributions(cachedConts);
+    } catch (e) {
+      console.warn('Could not load cached contributions:', e);
+    }
+
     const timer = setTimeout(() => setMounted(true), 100);
     return () => clearTimeout(timer);
   }, []);
+
+  const handleSyncContributions = async () => {
+    setSyncingContributions(true);
+    try {
+      const updated = await fetchLiveContributions(profile?.username);
+      setContributions(updated);
+    } catch (err) {
+      console.error('Failed to sync contributions:', err);
+    } finally {
+      setSyncingContributions(false);
+    }
+  };
 
   const handleCopyLink = async () => {
     const username = profile?.username || 'dev';
@@ -866,6 +902,298 @@ export default function Dashboard(): React.ReactElement {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+      </div>
+
+      {/* ─── 🚀 Live Contribution Tracker & Git Cinema Showcase Grid ─────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '24px' }}>
+        
+        {/* 1. Contribution Pipeline Showcase Panel */}
+        <div className="glass-panel" style={{
+          padding: '26px',
+          background: 'var(--glass-bg)',
+          border: '1px solid var(--glass-border)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255, 244, 183, 0.15)', border: '1px solid rgba(255, 244, 183, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <GitPullRequest size={18} color="#FFF4B7" />
+                  </div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc', margin: 0, fontFamily: 'Sora, sans-serif' }}>
+                    Live Contribution Pipeline
+                  </h3>
+                </div>
+                <p style={{ fontSize: '0.82rem', color: '#cbd5e1', marginTop: '4px', margin: 0 }}>
+                  Real-time status tracking for saved issues, pull requests, and merged code
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={handleSyncContributions}
+                  disabled={syncingContributions}
+                  style={{
+                    background: 'rgba(0, 106, 103, 0.25)',
+                    border: '1px solid rgba(0, 106, 103, 0.45)',
+                    color: '#FFF4B7',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    cursor: syncingContributions ? 'wait' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}
+                  title="Sync latest PR states with GitHub"
+                >
+                  <RefreshCw size={13} className={syncingContributions ? 'spin' : ''} />
+                  {syncingContributions ? 'Syncing...' : 'Sync GitHub'}
+                </button>
+
+                <button
+                  onClick={() => navigate('/tracker')}
+                  className="btn-primary"
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Open Tracker <ArrowRight size={13} />
+                </button>
+              </div>
+            </div>
+
+            {/* Pipeline Stage Badges Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: '10px',
+              marginBottom: '18px'
+            }}>
+              <div style={{ background: 'rgba(15, 23, 42, 0.65)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '10px', padding: '10px 12px', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Saved</span>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', marginTop: '2px' }}>
+                  {contributions.filter(c => c.status === 'saved').length}
+                </div>
+              </div>
+              <div style={{ background: 'rgba(15, 23, 42, 0.65)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '10px', padding: '10px 12px', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.7rem', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase' }}>Applied</span>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#60a5fa', marginTop: '2px' }}>
+                  {contributions.filter(c => c.status === 'applied').length}
+                </div>
+              </div>
+              <div style={{ background: 'rgba(15, 23, 42, 0.65)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '10px', padding: '10px 12px', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: 700, textTransform: 'uppercase' }}>In Review</span>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', marginTop: '2px' }}>
+                  {contributions.filter(c => c.status === 'in_progress').length}
+                </div>
+              </div>
+              <div style={{ background: 'rgba(15, 23, 42, 0.65)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '10px', padding: '10px 12px', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.7rem', color: '#34d399', fontWeight: 700, textTransform: 'uppercase' }}>Merged</span>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#34d399', marginTop: '2px' }}>
+                  {contributions.filter(c => c.status === 'merged').length}
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Contributions Preview List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {contributions.slice(0, 3).map((item) => {
+                const isMerged = item.status === 'merged';
+                const isInProg = item.status === 'in_progress';
+                const statusColor = isMerged ? '#34d399' : isInProg ? '#f59e0b' : '#94a3b8';
+                const statusBg = isMerged ? 'rgba(16, 185, 129, 0.15)' : isInProg ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.08)';
+
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      background: 'rgba(2, 6, 23, 0.5)',
+                      border: '1px solid rgba(0, 106, 103, 0.25)',
+                      borderRadius: '10px',
+                      padding: '10px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px'
+                    }}
+                  >
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600, fontFamily: 'JetBrains Mono, monospace' }}>
+                          {item.repository}
+                        </span>
+                        <span style={{
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          color: statusColor,
+                          background: statusBg,
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          border: `1px solid ${statusColor}40`
+                        }}>
+                          {item.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.84rem', fontWeight: 600, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                        {item.issueTitle}
+                      </div>
+                    </div>
+
+                    <a
+                      href={item.prUrl || item.issueUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        background: 'rgba(255, 244, 183, 0.1)',
+                        border: '1px solid rgba(255, 244, 183, 0.25)',
+                        color: '#FFF4B7',
+                        padding: '6px',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                      title="View on GitHub"
+                    >
+                      <ExternalLink size={14} />
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Git Cinema Codebase Replay Showcase Panel */}
+        <div className="glass-panel" style={{
+          padding: '26px',
+          background: 'var(--glass-bg)',
+          border: '1px solid var(--glass-border)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 106, 103, 0.35)', border: '1px solid rgba(255, 244, 183, 0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Film size={18} color="#FFF4B7" />
+                  </div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc', margin: 0, fontFamily: 'Sora, sans-serif' }}>
+                    Git Cinema Codebase Replay
+                  </h3>
+                </div>
+                <p style={{ fontSize: '0.82rem', color: '#cbd5e1', marginTop: '4px', margin: 0 }}>
+                  Interactive animated visualizer reconstructing open-source commit history
+                </p>
+              </div>
+
+              <button
+                onClick={() => navigate('/cinema')}
+                className="btn-primary"
+                style={{
+                  padding: '6px 14px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'linear-gradient(135deg, #006A67 0%, #004B49 100%)',
+                  border: '1px solid rgba(255, 244, 183, 0.4)',
+                  color: '#FFF4B7',
+                  cursor: 'pointer'
+                }}
+              >
+                <Play size={13} fill="#FFF4B7" /> Launch Cinema
+              </button>
+            </div>
+
+            {/* Cinema Presets Showcase */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
+              <div
+                onClick={() => navigate('/cinema')}
+                style={{
+                  background: 'rgba(2, 6, 23, 0.6)',
+                  border: '1px solid rgba(0, 106, 103, 0.35)',
+                  borderRadius: '10px',
+                  padding: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase' }}>React Core</div>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc', marginTop: '2px' }}>Fiber Architecture</div>
+                <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '4px' }}>12 Key Milestones</div>
+              </div>
+
+              <div
+                onClick={() => navigate('/cinema')}
+                style={{
+                  background: 'rgba(2, 6, 23, 0.6)',
+                  border: '1px solid rgba(0, 106, 103, 0.35)',
+                  borderRadius: '10px',
+                  padding: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: 700, textTransform: 'uppercase' }}>Express Engine</div>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc', marginTop: '2px' }}>Router Pipeline</div>
+                <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '4px' }}>10 Key Milestones</div>
+              </div>
+
+              <div
+                onClick={() => navigate('/cinema')}
+                style={{
+                  background: 'rgba(2, 6, 23, 0.6)',
+                  border: '1px solid rgba(255, 244, 183, 0.35)',
+                  borderRadius: '10px',
+                  padding: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ fontSize: '0.72rem', color: '#FFF4B7', fontWeight: 700, textTransform: 'uppercase' }}>OpenSource Connect</div>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc', marginTop: '2px' }}>AI Match Platform</div>
+                <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '4px' }}>12 Key Milestones</div>
+              </div>
+            </div>
+
+            {/* Feature bullets */}
+            <div style={{
+              background: 'rgba(0, 106, 103, 0.12)',
+              border: '1px dashed rgba(0, 106, 103, 0.35)',
+              borderRadius: '10px',
+              padding: '12px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.78rem',
+              color: '#cbd5e1'
+            }}>
+              <span>🎧 Synthesizer audio cues • 📐 Dynamic pan/zoom hierarchy • ⚡ Live repo timeline loader</span>
+            </div>
           </div>
         </div>
 
