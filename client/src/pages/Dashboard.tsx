@@ -38,7 +38,8 @@ import {
   Play,
   RefreshCw,
   Layers,
-  Activity
+  Activity,
+  Mail
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
@@ -577,9 +578,45 @@ export default function Dashboard(): React.ReactElement {
             {exportingPDF ? 'Generating...' : 'Export PDF'}
           </button>
 
-          {/* Avatar chip */}
+          {/* Email Notifications & Digest Hub Button */}
+          <button
+            onClick={() => navigate('/profile#email-hub')}
+            className="btn-secondary"
+            style={{
+              padding: '8px 16px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'rgba(0, 106, 103, 0.25)',
+              border: '1px solid rgba(255, 244, 183, 0.4)',
+              color: '#FFF4B7'
+            }}
+            title="Manage Email Notifications & Issue Digest Preferences"
+          >
+            <Mail size={14} color="#FFF4B7" />
+            Email Hub
+          </button>
+
+          {/* Avatar chip (Redirects to Profile on click) */}
           {profile && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(17, 45, 78, 0.85)', padding: '6px 14px', borderRadius: '12px', border: '1px solid rgba(63, 114, 175, 0.45)' }}>
+            <div
+              onClick={() => navigate('/profile')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                background: 'rgba(17, 45, 78, 0.85)',
+                padding: '6px 14px',
+                borderRadius: '12px',
+                border: '1px solid rgba(63, 114, 175, 0.45)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              title="View & Edit Profile Settings"
+            >
               <img src={profile.avatarUrl} alt={profile.username} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #3F72AF' }} />
               <div>
                 <div style={{ fontWeight: 700, color: '#F9F7F7', fontSize: '0.88rem', fontFamily: 'Sora, sans-serif' }}>{profile.username}</div>

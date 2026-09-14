@@ -93,6 +93,26 @@ export default function Profile({ setLoggedIn }: ProfileProps): React.ReactEleme
       .catch(() => {});
   }, []);
 
+  // Auto-scroll directly to Email Hub when redirected with #email-hub
+  useEffect(() => {
+    if (window.location.hash === '#email-hub' && !loading) {
+      const scrollTimer = setTimeout(() => {
+        const el = document.getElementById('email-hub');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.style.transition = 'all 0.5s ease';
+          el.style.borderColor = 'rgba(255, 244, 183, 0.9)';
+          el.style.boxShadow = '0 0 35px rgba(0, 106, 103, 0.6), 0 0 20px rgba(255, 244, 183, 0.35)';
+          setTimeout(() => {
+            el.style.borderColor = '';
+            el.style.boxShadow = '';
+          }, 2500);
+        }
+      }, 150);
+      return () => clearTimeout(scrollTimer);
+    }
+  }, [loading]);
+
   const toggleInterest = (tech: string): void => {
     const updated = selectedInterests.includes(tech)
       ? selectedInterests.filter(item => item !== tech)
@@ -627,7 +647,7 @@ export default function Profile({ setLoggedIn }: ProfileProps): React.ReactEleme
       </div>
 
       {/* ─── 📬 Email Notifications & Issue Digest Hub ───────────── */}
-      <div className="glass-panel animate-fade-in delay-300" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
+      <div id="email-hub" className="glass-panel animate-fade-in delay-300" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(0, 106, 103, 0.25)', border: '1px solid rgba(255, 244, 183, 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
