@@ -5,6 +5,7 @@ import { connectDB } from './config/db';
 import userRoutes from './routes/userRoutes';
 import issueRoutes from './routes/issueRoutes';
 import authRoutes from './routes/authRoutes';
+import emailRoutes from './routes/emailRoutes';
 
 dotenv.config();
 
@@ -34,6 +35,8 @@ app.use('/api/user', userRoutes);
 app.use('/user', userRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/issues', issueRoutes);
+app.use('/api/email', emailRoutes);
+app.use('/email', emailRoutes);
 
 // Start Server (only when running locally, skip in Vercel serverless)
 if (!process.env.VERCEL) {

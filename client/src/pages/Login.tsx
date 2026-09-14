@@ -79,7 +79,7 @@ export default function Login({ loggedIn = false, setLoggedIn }: LoginProps): Re
         <p style={{ fontSize: '0.92rem', color: 'var(--text-muted)', maxWidth: '420px', margin: '0 auto', lineHeight: '1.65' }}>
           {isAuth
             ? 'You are currently authenticated. Explore your developer intelligence dashboard, AI issue feed, and solution roadmaps.'
-            : 'Connect your GitHub account or explore the instant interactive sandbox to discover tailored issues with step-by-step AI guidance.'
+            : 'Connect your GitHub account to discover tailored issues with step-by-step AI guidance.'
           }
         </p>
 
@@ -138,18 +138,6 @@ export default function Login({ loggedIn = false, setLoggedIn }: LoginProps): Re
             >
               <GithubIcon size={18} />
               Continue with GitHub
-            </button>
-
-            <button
-              onClick={() => {
-                localStorage.setItem('token', 'demo-token');
-                if (setLoggedIn) setLoggedIn(true);
-                navigate('/dashboard');
-              }}
-              className="btn-secondary"
-              style={{ width: '100%', padding: '10px 20px', fontSize: '0.85rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-            >
-              ⚡ Instant Demo Sandbox
             </button>
 
             <button

@@ -320,69 +320,176 @@ const generateHeuristicChatResponse = (
   issueTitle: string,
   userInterests: string[]
 ): string => {
-  const msgLower = message.toLowerCase();
+  const msgLower = message.trim().toLowerCase();
   const stackName = userInterests.slice(0, 3).join(', ') || 'TypeScript, React, Node.js';
 
-  // 1. How to choose best first issue / skills matching
+  // 1. Greetings & Introductions (hi, hello, hey, hii, etc.)
+  if (/^(hi+|hello|hey+|howdy|hola|greetings|yo|sup)(\s|$|[!?.])/i.test(msgLower) || msgLower === 'hi' || msgLower === 'hii') {
+    return [
+      '👋 **Hello! Welcome to OpenSource Connect Copilot!**',
+      '',
+      'I am your dedicated AI open-source companion. Here is how I can assist you:',
+      '',
+      `- 🔍 **Find Beginner Issues**: Identify high-match issues filtered for \`${stackName}\` with beginner-friendly labels.`,
+      '- 🛠️ **Explain Codebase & Tech Stack**: Understand project architecture, file navigation, and environment setup.',
+      '- 🌿 **Git & PR Workflows**: Step-by-step commands to fork, branch, test, commit, and submit maintainer-ready PRs.',
+      '- 📝 **PR Description Generator**: Write professional pull request descriptions with checklists and test proof.',
+      '- 📊 **Contribution Tracking**: Monitor your contribution pipeline from *Saved* to *Merged*.',
+      '',
+      'What would you like to work on or explore today?'
+    ].join('\n');
+  }
+
+  // 2. Tech Details / Architecture / Stack info
+  if (
+    msgLower.includes('tech details') ||
+    msgLower.includes('tech stack') ||
+    msgLower.includes('technologies') ||
+    msgLower.includes('architecture') ||
+    msgLower.includes('how does it work') ||
+    msgLower.includes('built with') ||
+    msgLower.includes('what tech') ||
+    msgLower.includes('stack')
+  ) {
+    return [
+      '⚡ **OpenSource Connect Platform — Technical Overview & Architecture**',
+      '',
+      'Here is the complete tech stack and architectural breakdown:',
+      '',
+      '### 🖥️ Frontend Architecture:',
+      '- **Framework**: React 19 + TypeScript with **Vite** for sub-second HMR.',
+      '- **Routing**: React Router DOM (v6/v7) with dedicated routes for Dashboard, Issue Discovery, Solution Lab, and Contribution Tracker.',
+      '- **Styling & UI**: Custom CSS Design System with dark-mode glassmorphism, responsive micro-animations, and **Lucide React** icons.',
+      '- **State & Storage**: JWT session storage, reactive localStorage pipelines, and exportable PDF portfolio builder.',
+      '',
+      '### ⚙️ Backend Architecture:',
+      '- **Runtime & Server**: Node.js + Express.js with TypeScript (`tsx`).',
+      '- **AI Engine**: Google Gemini Generative AI (with automated heuristic fallback for resilient offline/high-traffic uptime).',
+      '- **GitHub Integration**: GitHub REST & Search API v3 (`@octokit/rest`) for live repository analysis, issue scoring, and PR lifecycle synchronization.',
+      '- **Security**: JWT token authentication, CORS security headers, and rate-limit handling.',
+      '',
+      '### 🎯 Core Algorithms:',
+      '- **Developer Match Engine**: Dynamic multi-factor scoring (Language Overlap 40%, Keyword/Label Alignment 30%, Difficulty Calibration 20%, Repository Health 10%).',
+      '- **Live Contribution Pipeline**: Real-time status tracker (Saved ➔ Applied ➔ In Progress ➔ Merged).'
+    ].join('\n');
+  }
+
+  // 3. How can you help / Capabilities / Features
+  if (
+    msgLower.includes('what can you do') ||
+    msgLower.includes('how can you help') ||
+    msgLower.includes('features') ||
+    msgLower.includes('help me') ||
+    msgLower.includes('capabilities')
+  ) {
+    return [
+      '🤖 **Here is everything I can do for you:**',
+      '',
+      `1. **Issue Matching & Discovery**: Match GitHub issues to your exact skill profile (${stackName}).`,
+      '2. **Terminal Workflow Commands**: Provide ready-to-run Git commands tailored for forking, branching, and pushing.',
+      '3. **PR Starter Kit**: Draft structured Pull Request descriptions following open-source contribution guidelines.',
+      '4. **Codebase Navigation**: Help you locate relevant files, components, and unit tests inside open-source repos.',
+      '5. **Portfolio & Tracker**: Track your live contributions and export a verified open-source developer resume.'
+    ].join('\n');
+  }
+
+  // 4. How to choose best first issue / skills matching
   if (
     msgLower.includes('choose') ||
     msgLower.includes('pick') ||
     msgLower.includes('best first issue') ||
     msgLower.includes('first issue') ||
     msgLower.includes('skills') ||
-    msgLower.includes('beginner')
+    msgLower.includes('beginner') ||
+    msgLower.includes('recommend')
   ) {
-    return `To choose the best first open-source issue aligned with your skills (${stackName}), follow this proven 4-step framework:
-
-1. **Filter by Matching Tech Stack**: Focus strictly on repositories using languages and tools you know (${stackName}). Avoid switching languages on your first contribution so you can focus on the codebase conventions.
-2. **Target High-Signal Beginner Labels**:
-   - \`good first issue\` — Curated by maintainers specifically for new contributors with contained scopes.
-   - \`help wanted\` — Explicit maintainer invitation with lower risk of conflicts.
-   - \`documentation\` or \`good first bug\` — Great entry points to understand the CI/CD pipeline.
-3. **Verify Repository Health & Responsiveness**:
-   - Check the **Pull Requests** tab: Are maintainers actively merging or reviewing PRs in the last 7–14 days?
-   - Look for clear **CONTRIBUTING.md** and active discussions.
-4. **Leverage OpenSource Connect Match Scores**:
-   - Head over to the **Issue Feed** tab where issues are pre-ranked with 85%+ match scores based on your GitHub commit history!`;
+    return [
+      `To choose the best first open-source issue aligned with your skills (${stackName}), follow this proven 4-step framework:`,
+      '',
+      `1. **Filter by Matching Tech Stack**: Focus strictly on repositories using languages and tools you know (${stackName}). Avoid switching languages on your first contribution so you can focus on the codebase conventions.`,
+      '2. **Target High-Signal Beginner Labels**:',
+      '   - `good first issue` — Curated by maintainers specifically for new contributors with contained scopes.',
+      '   - `help wanted` — Explicit maintainer invitation with lower risk of conflicts.',
+      '   - `documentation` or `good first bug` — Great entry points to understand the CI/CD pipeline.',
+      '3. **Verify Repository Health & Responsiveness**:',
+      '   - Check the **Pull Requests** tab: Are maintainers actively merging or reviewing PRs in the last 7–14 days?',
+      '   - Look for clear **CONTRIBUTING.md** and active discussions.',
+      '4. **Leverage OpenSource Connect Match Scores**:',
+      '   - Head over to the **Issue Feed** tab where issues are pre-ranked with 85%+ match scores based on your GitHub commit history!'
+    ].join('\n');
   }
 
-  // 2. Git Pull Request Workflow
+  // 5. Git Pull Request Workflow
   if (
     msgLower.includes('git') ||
     msgLower.includes('pull request') ||
     msgLower.includes('workflow') ||
-    msgLower.includes('pr') ||
-    msgLower.includes('fork')
+    msgLower.includes('pr workflow') ||
+    msgLower.includes('fork') ||
+    msgLower.includes('branch')
   ) {
-    return `Here is the standard step-by-step Git workflow to submit your Pull Request:
-
-1. **Fork & Clone**:
-   \`\`\`bash
-   git clone https://github.com/YOUR_USERNAME/repo-name.git
-   cd repo-name
-   git remote add upstream https://github.com/ORIGINAL_OWNER/repo-name.git
-   \`\`\`
-2. **Create a Dedicated Branch**:
-   \`\`\`bash
-   git checkout -b fix/issue-description
-   \`\`\`
-3. **Implement, Test & Verify**:
-   \`\`\`bash
-   npm test
-   git status
-   \`\`\`
-4. **Commit with Semantic Messages**:
-   \`\`\`bash
-   git commit -m "fix: resolve edge case in data parser (#123)"
-   \`\`\`
-5. **Push & Open PR**:
-   \`\`\`bash
-   git push origin fix/issue-description
-   \`\`\`
-Then visit the original repository on GitHub to click **Compare & pull request**!`;
+    return [
+      'Here is the standard step-by-step Git workflow to submit your Pull Request:',
+      '',
+      '1. **Fork & Clone**:',
+      '   ```bash',
+      '   git clone https://github.com/YOUR_USERNAME/repo-name.git',
+      '   cd repo-name',
+      '   git remote add upstream https://github.com/ORIGINAL_OWNER/repo-name.git',
+      '   ```',
+      '2. **Create a Dedicated Branch**:',
+      '   ```bash',
+      '   git checkout -b fix/issue-description',
+      '   ```',
+      '3. **Implement, Test & Verify**:',
+      '   ```bash',
+      '   npm test',
+      '   git status',
+      '   ```',
+      '4. **Commit with Semantic Messages**:',
+      '   ```bash',
+      '   git commit -m "fix: resolve edge case in data parser (#123)"',
+      '   ```',
+      '5. **Push & Open PR**:',
+      '   ```bash',
+      '   git push origin fix/issue-description',
+      '   ```',
+      'Then visit the original repository on GitHub to click **Compare & pull request**!'
+    ].join('\n');
   }
 
-  // 3. Match Score Explanation
+  // 6. PR Description & Title template
+  if (
+    msgLower.includes('draft pr') ||
+    msgLower.includes('pr description') ||
+    msgLower.includes('pr title') ||
+    msgLower.includes('template')
+  ) {
+    return [
+      'Here is a high-acceptance Pull Request template you can use:',
+      '',
+      '```markdown',
+      '## 🎯 Description',
+      `Resolves #${issueTitle ? 'issue' : '123'}. Briefly describe the changes introduced in this PR and why they are necessary.`,
+      '',
+      '## 🛠️ Changes Made',
+      '- [x] Identified and fixed root cause in relevant module',
+      '- [x] Added unit tests covering edge cases',
+      '- [x] Verified existing test suite passes with 0 regressions',
+      '',
+      '## 🧪 Testing Steps',
+      '1. Run `npm test` to execute automated test suite.',
+      '2. Verified locally by testing against input edge cases.',
+      '',
+      '## 📋 Checklist',
+      '- [x] My code follows the repository style guidelines',
+      '- [x] I have self-reviewed my code',
+      '- [x] Tests have been added/updated',
+      '```'
+    ].join('\n');
+  }
+
+  // 7. Match Score Explanation
   if (
     msgLower.includes('match') ||
     msgLower.includes('score') ||
@@ -390,87 +497,98 @@ Then visit the original repository on GitHub to click **Compare & pull request**
     msgLower.includes('accuracy') ||
     msgLower.includes('algorithm')
   ) {
-    return `OpenSource Connect calculates match scores using a multi-factor developer profiling model:
-
-- **Language Overlap (40%)**: Compares the repository's primary languages against your verified language breakdown (${stackName}).
-- **Topic & Keyword Alignment (30%)**: Matches issue labels (e.g., \`react\`, \`state-management\`, \`api\`) against your extracted technical skills.
-- **Difficulty & Scope Calibration (20%)**: Evaluates issue complexity, lines of code, and estimated resolution time against your experience level.
-- **Repository Health Factor (10%)**: Boosts issues from active repositories with clear documentation and responsive maintainers.`;
+    return [
+      'OpenSource Connect calculates match scores using a multi-factor developer profiling model:',
+      '',
+      `- **Language Overlap (40%)**: Compares the repository's primary languages against your verified language breakdown (${stackName}).`,
+      '- **Topic & Keyword Alignment (30%)**: Matches issue labels (e.g., `react`, `state-management`, `api`) against your extracted technical skills.',
+      '- **Difficulty & Scope Calibration (20%)**: Evaluates issue complexity, lines of code, and estimated resolution time against your experience level.',
+      '- **Repository Health Factor (10%)**: Boosts issues from active repositories with clear documentation and responsive maintainers.'
+    ].join('\n');
   }
 
-  // 4. Codebase Architecture / Where to start
+  // 8. Codebase Architecture / Where to start
   if (
     msgLower.includes('where') ||
     msgLower.includes('start') ||
-    msgLower.includes('architecture') ||
     msgLower.includes('structure') ||
     msgLower.includes('files')
   ) {
-    return `To quickly orient yourself in this codebase:
-
-1. **Start at the Entry Points**: Inspect \`package.json\` (check \`scripts\` and \`main\`), then review \`src/index.ts\` or main application router.
-2. **Search for Keywords**: Use Ripgrep or GitHub search (\`Ctrl+F\`) for the specific error string, function name, or component mentioned in the issue.
-3. **Trace Tests First**: Look inside \`__tests__/\` or \`*.test.ts\` files related to the feature. Tests are the fastest documentation for expected inputs and outputs.
-4. **Reproduce Locally**: Write a minimal failing test before writing any fix code!`;
+    return [
+      'To quickly orient yourself in this codebase:',
+      '',
+      '1. **Start at the Entry Points**: Inspect `package.json` (check `scripts` and `main`), then review `src/index.ts` or main application router.',
+      '2. **Search for Keywords**: Use Ripgrep or GitHub search (`Ctrl+F`) for the specific error string, function name, or component mentioned in the issue.',
+      '3. **Trace Tests First**: Look inside `__tests__/` or `*.test.ts` files related to the feature. Tests are the fastest documentation for expected inputs and outputs.',
+      '4. **Reproduce Locally**: Write a minimal failing test before writing any fix code!'
+    ].join('\n');
   }
 
-  // 5. Testing
+  // 9. Testing
   if (msgLower.includes('test') || msgLower.includes('spec') || msgLower.includes('verify')) {
-    return `To test your changes reliably:
-
-1. **Run Existing Test Suite**:
-   \`\`\`bash
-   npm test
-   \`\`\`
-2. **Run Targeted Tests**:
-   \`\`\`bash
-   npm test -- --watch
-   \`\`\`
-3. **Write a Unit Test for Your Fix**: Ensure your new test fails without your fix and passes with it to avoid regressions.`;
+    return [
+      'To test your changes reliably:',
+      '',
+      '1. **Run Existing Test Suite**:',
+      '   ```bash',
+      '   npm test',
+      '   ```',
+      '2. **Run Targeted Tests**:',
+      '   ```bash',
+      '   npm test -- --watch',
+      '   ```',
+      '3. **Write a Unit Test for Your Fix**: Ensure your new test fails without your fix and passes with it to avoid regressions.'
+    ].join('\n');
   }
 
-  // 6. Setup / Install / Run
+  // 10. Setup / Install / Run
   if (msgLower.includes('setup') || msgLower.includes('run') || msgLower.includes('install')) {
-    return `Standard setup commands for this project:
-
-\`\`\`bash
-# 1. Install dependencies
-npm install
-
-# 2. Run local development environment
-npm run dev
-
-# 3. Run linter and type-checking
-npm run lint
-npm run build
-\`\`\`
-Let me know if you run into any dependency or version conflicts!`;
+    return [
+      'Standard setup commands for this project:',
+      '',
+      '```bash',
+      '# 1. Install dependencies',
+      'npm install',
+      '',
+      '# 2. Run local development environment',
+      'npm run dev',
+      '',
+      '# 3. Run linter and type-checking',
+      'npm run lint',
+      'npm run build',
+      '```',
+      'Let me know if you run into any dependency or version conflicts!'
+    ].join('\n');
   }
 
-  // 7. Code fix / Snippet
+  // 11. Code fix / Snippet
   if (msgLower.includes('code') || msgLower.includes('write') || msgLower.includes('snippet') || msgLower.includes('fix')) {
-    return `Here is a clean implementation pattern in **${userInterests[0] || 'TypeScript'}**:
-
-\`\`\`typescript
-export const handleIssueResolution = async <T>(input: T): Promise<{ success: boolean; data: T }> => {
-  if (!input) {
-    throw new Error('Invalid input parameter');
+    return [
+      `Here is a clean implementation pattern in **${userInterests[0] || 'TypeScript'}**:`,
+      '',
+      '```typescript',
+      'export const handleIssueResolution = async <T>(input: T): Promise<{ success: boolean; data: T }> => {',
+      '  if (!input) {',
+      "    throw new Error('Invalid input parameter');",
+      '  }',
+      '',
+      '  // Process and return validated result',
+      '  return {',
+      '    success: true,',
+      '    data: input,',
+      '  };',
+      '};',
+      '```',
+      'Let me know what specific function or component you want me to write or refactor!'
+    ].join('\n');
   }
 
-  // Process and return validated result
-  return {
-    success: true,
-    data: input,
-  };
-};
-\`\`\`
-Let me know what specific function or component you want me to write or refactor!`;
-  }
-
-  // General helpful response tailored directly to developer's query
-  return `Great question! Here is how to approach this for your open-source journey:
-
-- **Stack Focus**: Focus on your primary technologies (**${stackName}**).
-- **Recommended Next Step**: Head to the **Issue Feed** to view personalized issues curated for your skills, or open an issue to access the **Guided AI Solution Lab**.
-- **Ask me anytime**: I can help you with specific file structures, writing test cases, or drafting your Pull Request description!`;
+  // General helpful fallback tailored directly to developer's query
+  return [
+    'Great question! Here is how to approach this for your open-source journey:',
+    '',
+    `- **Stack Focus**: Focus on your primary technologies (**${stackName}**).`,
+    '- **Recommended Next Step**: Head to the **Issue Feed** to view personalized issues curated for your skills, or open an issue to access the **Guided AI Solution Lab**.',
+    '- **Ask me anytime**: I can help you with specific file structures, writing test cases, drafting PR descriptions, or technical details!'
+  ].join('\n');
 };

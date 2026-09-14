@@ -377,3 +377,63 @@ export const fetchLiveContributions = async (username?: string): Promise<Contrib
   return cached;
 };
 
+/* ─── SMTP Email API ─────────────────────────────────────────────────────── */
+
+export interface SmtpStatusResponse {
+  configured: boolean;
+  host: string;
+  port: string;
+  service: string | null;
+  user: string | null;
+}
+
+export const fetchSmtpStatus = async (): Promise<SmtpStatusResponse> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/email/status`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch SMTP status');
+    return res.json();
+  } catch (err) {
+    console.warn('Could not fetch SMTP status:', err);
+    return { configured: false, host: 'smtp.gmail.com', port: '587', service: null, user: null };
+  }
+};
+
+export const sendTestEmailApi = async (email: string, username?: string): Promise<{ success: boolean; message: string; preview?: boolean }> => {
+  const res = await fetch(`${API_BASE_URL}/email/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders() },
+    body: JSON.stringify({ email, username })
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || 'Failed to send test email');
+  }
+  return res.json();
+};
+
+export const sendDigestEmailApi = async (email: string, username?: string): Promise<{ success: boolean; message: string; preview?: boolean }> => {
+  const res = await fetch(`${API_BASE_URL}/email/digest`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders() },
+    body: JSON.stringify({ email, username })
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || 'Failed to send digest email');
+  }
+  return res.json();
+};
+
+export const sendFeedbackApi = async (data: { name: string; email: string; subject: string; message: string }): Promise<{ success: boolean; message: string }> => {
+  const res = await fetch(`${API_BASE_URL}/email/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders() },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || 'Failed to send feedback message');
+  }
+  return res.json();
+};
+

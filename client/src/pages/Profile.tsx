@@ -1,8 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile, updateUserProfile, logout, getAuthUrl, UserProfile } from '../services/api';
+import {
+  fetchUserProfile,
+  updateUserProfile,
+  logout,
+  getAuthUrl,
+  UserProfile,
+  fetchSmtpStatus,
+  sendTestEmailApi,
+  sendDigestEmailApi,
+  SmtpStatusResponse
+} from '../services/api';
 import { generateDeveloperPortfolioPDF } from '../utils/pdfExport';
-import { MapPin, Link2, Users, GitFork, Star, BookOpen, LogOut, RefreshCw, Shield, Share2, Check, FileText } from 'lucide-react';
+import {
+  MapPin,
+  Link2,
+  Users,
+  GitFork,
+  Star,
+  BookOpen,
+  LogOut,
+  RefreshCw,
+  Shield,
+  Share2,
+  Check,
+  FileText,
+  Mail,
+  Send,
+  Bell,
+  AlertCircle,
+  Sparkles
+} from 'lucide-react';
 
 const defaultAvailableList: string[] = [
   'React', 'Node', 'Python', 'MongoDB', 'Express', 'JavaScript',
@@ -36,6 +64,15 @@ export default function Profile({ setLoggedIn }: ProfileProps): React.ReactEleme
   const [saving, setSaving] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
 
+  // Email & Notification State
+  const [notificationEmail, setNotificationEmail] = useState<string>(() => localStorage.getItem('osc_notification_email') || '');
+  const [digestEnabled, setDigestEnabled] = useState<boolean>(() => localStorage.getItem('osc_digest_enabled') !== 'false');
+  const [prAlertsEnabled, setPrAlertsEnabled] = useState<boolean>(() => localStorage.getItem('osc_pr_alerts_enabled') !== 'false');
+  const [sendingTestEmail, setSendingTestEmail] = useState<boolean>(false);
+  const [sendingDigestEmail, setSendingDigestEmail] = useState<boolean>(false);
+  const [emailFeedback, setEmailFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [smtpStatus, setSmtpStatus] = useState<SmtpStatusResponse | null>(null);
+
   useEffect(() => {
     fetchUserProfile()
       .then((data) => {
@@ -44,10 +81,37 @@ export default function Profile({ setLoggedIn }: ProfileProps): React.ReactEleme
         setExperienceLevel(data.experienceLevel || 'Beginner');
         // Use displayName if present, otherwise fall back to username
         setDisplayName(data.displayName || data.username || '');
+        if (!notificationEmail && data.username) {
+          setNotificationEmail(`${data.username}@users.noreply.github.com`);
+        }
       })
       .catch((err) => console.error('Failed to load profile:', err))
       .finally(() => setLoading(false));
+
+    fetchSmtpStatus()
+      .then((status) => setSmtpStatus(status))
+      .catch(() => {});
   }, []);
+
+  // Auto-scroll directly to Email Hub when redirected with #email-hub
+  useEffect(() => {
+    if (window.location.hash === '#email-hub' && !loading) {
+      const scrollTimer = setTimeout(() => {
+        const el = document.getElementById('email-hub');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.style.transition = 'all 0.5s ease';
+          el.style.borderColor = 'rgba(255, 244, 183, 0.9)';
+          el.style.boxShadow = '0 0 35px rgba(0, 106, 103, 0.6), 0 0 20px rgba(255, 244, 183, 0.35)';
+          setTimeout(() => {
+            el.style.borderColor = '';
+            el.style.boxShadow = '';
+          }, 2500);
+        }
+      }, 150);
+      return () => clearTimeout(scrollTimer);
+    }
+  }, [loading]);
 
   const toggleInterest = (tech: string): void => {
     const updated = selectedInterests.includes(tech)
@@ -69,12 +133,77 @@ export default function Profile({ setLoggedIn }: ProfileProps): React.ReactEleme
     setSelectedInterests(selectedInterests.filter(item => item !== tech));
   };
 
+  const handleSendTestEmail = async (): Promise<void> => {
+    if (!notificationEmail || !notificationEmail.includes('@')) {
+      setEmailFeedback({ type: 'error', message: 'Please enter a valid notification email address.' });
+      return;
+    }
+    setSendingTestEmail(true);
+    setEmailFeedback(null);
+    try {
+      const res = await sendTestEmailApi(notificationEmail, displayName || profile?.username || 'Developer');
+      localStorage.setItem('osc_notification_email', notificationEmail);
+      setEmailFeedback({
+        type: 'success',
+        message: res.preview
+          ? 'Preview mode: SMTP not configured in .env. Email simulated successfully!'
+          : `Verification test email sent to ${notificationEmail}!`
+      });
+    } catch (err: any) {
+      setEmailFeedback({
+        type: 'error',
+        message: err.response?.data?.error || err.message || 'Failed to dispatch test email.'
+      });
+    } finally {
+      setSendingTestEmail(false);
+    }
+  };
+
+  const handleSendDigestEmail = async (): Promise<void> => {
+    if (!notificationEmail || !notificationEmail.includes('@')) {
+      setEmailFeedback({ type: 'error', message: 'Please enter a valid notification email address.' });
+      return;
+    }
+    setSendingDigestEmail(true);
+    setEmailFeedback(null);
+    try {
+      const res = await sendDigestEmailApi(notificationEmail, displayName || profile?.username || 'Developer');
+      localStorage.setItem('osc_notification_email', notificationEmail);
+      setEmailFeedback({
+        type: 'success',
+        message: res.preview
+          ? 'Preview mode: Simulated issue recommendation digest dispatched!'
+          : `Curated issue recommendation digest sent to ${notificationEmail}!`
+      });
+    } catch (err: any) {
+      setEmailFeedback({
+        type: 'error',
+        message: err.response?.data?.error || err.message || 'Failed to dispatch issue digest.'
+      });
+    } finally {
+      setSendingDigestEmail(false);
+    }
+  };
+
+  const handleToggleDigest = (val: boolean): void => {
+    setDigestEnabled(val);
+    localStorage.setItem('osc_digest_enabled', String(val));
+  };
+
+  const handleTogglePrAlerts = (val: boolean): void => {
+    setPrAlertsEnabled(val);
+    localStorage.setItem('osc_pr_alerts_enabled', String(val));
+  };
+
   const handleSave = async (): Promise<void> => {
     setSaving(true);
     setSavedSuccess(false);
     try {
       const updated = await updateUserProfile(selectedInterests, experienceLevel, displayName);
       setProfile((prev) => prev ? { ...prev, ...updated } : updated);
+      if (notificationEmail) {
+        localStorage.setItem('osc_notification_email', notificationEmail);
+      }
       setIsEditingName(false);
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
@@ -515,6 +644,200 @@ export default function Profile({ setLoggedIn }: ProfileProps): React.ReactEleme
             );
           })}
         </div>
+      </div>
+
+      {/* ─── 📬 Email Notifications & Issue Digest Hub ───────────── */}
+      <div id="email-hub" className="glass-panel animate-fade-in delay-300" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(0, 106, 103, 0.25)', border: '1px solid rgba(255, 244, 183, 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Mail size={18} color="#FFF4B7" />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                SMTP Email Notifications &amp; Digest Hub
+              </h3>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                Receive curated issue recommendations matching your stack &amp; live PR merge alerts.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              padding: '4px 10px',
+              borderRadius: '20px',
+              fontFamily: 'JetBrains Mono, monospace',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: smtpStatus?.configured ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+              color: smtpStatus?.configured ? '#34d399' : '#fbbf24',
+              border: `1px solid ${smtpStatus?.configured ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
+            }}>
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: smtpStatus?.configured ? '#34d399' : '#fbbf24', display: 'inline-block' }} />
+              {smtpStatus?.configured ? `SMTP Live (${smtpStatus.service || smtpStatus.host})` : 'SMTP Simulation Mode'}
+            </span>
+          </div>
+        </div>
+
+        {/* Email Address Input */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#cbd5e1' }}>
+            Notification Email Address:
+          </label>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <input
+              type="email"
+              placeholder="e.g. developer@gmail.com"
+              value={notificationEmail}
+              onChange={(e) => setNotificationEmail(e.target.value)}
+              style={{
+                flex: 1,
+                minWidth: '240px',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                background: 'rgba(0, 0, 0, 0.35)',
+                color: '#ffffff',
+                fontSize: '0.85rem',
+                outline: 'none'
+              }}
+            />
+            <button
+              type="button"
+              onClick={handleSendTestEmail}
+              disabled={sendingTestEmail}
+              className="btn-secondary"
+              style={{
+                padding: '10px 16px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                borderRadius: '8px',
+                cursor: sendingTestEmail ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#FFF4B7',
+                border: '1px solid rgba(255, 244, 183, 0.4)',
+                background: 'rgba(0, 106, 103, 0.25)'
+              }}
+            >
+              <Send size={14} />
+              {sendingTestEmail ? 'Sending Test...' : 'Send Test Email'}
+            </button>
+          </div>
+        </div>
+
+        {/* Digest & Alert Preferences Toggles */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+          <div
+            onClick={() => handleToggleDigest(!digestEnabled)}
+            style={{
+              padding: '14px 16px',
+              borderRadius: '8px',
+              background: digestEnabled ? 'rgba(0, 106, 103, 0.18)' : 'rgba(255, 255, 255, 0.02)',
+              border: `1px solid ${digestEnabled ? 'rgba(255, 244, 183, 0.35)' : 'rgba(255, 255, 255, 0.05)'}`,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '10px'
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: digestEnabled ? '#FFF4B7' : '#cbd5e1' }}>
+                📬 Weekly Issue Match Digest
+              </div>
+              <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                Curated list of beginner issues matching your top skills
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={digestEnabled}
+              onChange={() => {}}
+              style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#006A67' }}
+            />
+          </div>
+
+          <div
+            onClick={() => handleTogglePrAlerts(!prAlertsEnabled)}
+            style={{
+              padding: '14px 16px',
+              borderRadius: '8px',
+              background: prAlertsEnabled ? 'rgba(0, 106, 103, 0.18)' : 'rgba(255, 255, 255, 0.02)',
+              border: `1px solid ${prAlertsEnabled ? 'rgba(255, 244, 183, 0.35)' : 'rgba(255, 255, 255, 0.05)'}`,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '10px'
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: prAlertsEnabled ? '#FFF4B7' : '#cbd5e1' }}>
+                🎉 PR Merge Celebration Alerts
+              </div>
+              <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                Instant notifications when your pull requests get merged
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={prAlertsEnabled}
+              onChange={() => {}}
+              style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#006A67' }}
+            />
+          </div>
+        </div>
+
+        {/* Quick Action: Send Digest Now */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '16px' }}>
+          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+            Want an instant issue batch right now?
+          </span>
+          <button
+            type="button"
+            onClick={handleSendDigestEmail}
+            disabled={sendingDigestEmail}
+            className="btn-primary"
+            style={{
+              padding: '8px 18px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              borderRadius: '8px',
+              cursor: sendingDigestEmail ? 'wait' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Sparkles size={14} />
+            {sendingDigestEmail ? 'Dispatching Digest...' : 'Dispatch Fresh Issue Digest Now'}
+          </button>
+        </div>
+
+        {/* Feedback Alert Message */}
+        {emailFeedback && (
+          <div style={{
+            padding: '12px 16px',
+            borderRadius: '8px',
+            background: emailFeedback.type === 'success' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+            border: `1px solid ${emailFeedback.type === 'success' ? 'rgba(52, 211, 153, 0.35)' : 'rgba(248, 113, 113, 0.35)'}`,
+            color: emailFeedback.type === 'success' ? '#34d399' : '#f87171',
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            {emailFeedback.type === 'success' ? <Check size={16} /> : <AlertCircle size={16} />}
+            <span>{emailFeedback.message}</span>
+          </div>
+        )}
       </div>
 
       {/* ─── Session & Account Management ─────────────────────────────── */}
