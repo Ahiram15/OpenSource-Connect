@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Sparkles, LayoutDashboard, Compass, User, LogOut, LogIn, GitPullRequest, Film } from 'lucide-react';
+import { Sparkles, LayoutDashboard, Compass, User, LogOut, LogIn, GitPullRequest, Film, Mail, Send, X, Check, MessageSquare } from 'lucide-react';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import IssueList from './pages/IssueList';
@@ -9,7 +9,7 @@ import Profile from './pages/Profile';
 import ContributionTracker from './pages/ContributionTracker';
 import GitCinema from './pages/GitCinema';
 import GlobalChatCopilot from './components/GlobalChatCopilot';
-import { getAuthToken, setAuthToken, logout, isAuthenticated, getAuthUrl } from './services/api';
+import { getAuthToken, setAuthToken, logout, isAuthenticated, getAuthUrl, sendFeedbackApi } from './services/api';
 
 const GithubIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -178,6 +178,44 @@ function AppBody({ loggedIn, setLoggedIn }: { loggedIn: boolean; setLoggedIn: (v
   const location = useLocation();
   const isCinema = location.pathname === '/cinema';
 
+  // Contact & Feedback Modal State
+  const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
+  const [feedbackName, setFeedbackName] = useState<string>('');
+  const [feedbackEmail, setFeedbackEmail] = useState<string>('');
+  const [feedbackSubject, setFeedbackSubject] = useState<string>('Feedback / Feature Request');
+  const [feedbackMsg, setFeedbackMsg] = useState<string>('');
+  const [sendingFeedback, setSendingFeedback] = useState<boolean>(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState<boolean>(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackEmail || !feedbackMsg) {
+      setFeedbackError('Please provide your email and message.');
+      return;
+    }
+    setSendingFeedback(true);
+    setFeedbackError(null);
+    try {
+      await sendFeedbackApi({
+        name: feedbackName || 'Anonymous Dev',
+        email: feedbackEmail,
+        subject: feedbackSubject,
+        message: feedbackMsg
+      });
+      setFeedbackSuccess(true);
+      setTimeout(() => {
+        setFeedbackSuccess(false);
+        setShowFeedbackModal(false);
+        setFeedbackMsg('');
+      }, 2500);
+    } catch (err: any) {
+      setFeedbackError(err.response?.data?.error || err.message || 'Failed to send feedback.');
+    } finally {
+      setSendingFeedback(false);
+    }
+  };
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflow: isCinema ? 'hidden' : 'visible' }}>
       <HeaderContent loggedIn={loggedIn} setLoggedIn={setLoggedIn} />
@@ -225,6 +263,27 @@ function AppBody({ loggedIn, setLoggedIn }: { loggedIn: boolean; setLoggedIn: (v
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px', fontSize: '0.8rem', color: 'var(--text-dim)', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setShowFeedbackModal(true)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#FFF4B7',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  transition: 'background 0.2s'
+                }}
+              >
+                <Mail size={14} color="#FFF4B7" />
+                Contact &amp; Support
+              </button>
+
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981', display: 'inline-block' }} />
                 GitHub API Status: Operational
@@ -232,6 +291,156 @@ function AppBody({ loggedIn, setLoggedIn }: { loggedIn: boolean; setLoggedIn: (v
             </div>
           </div>
         </footer>
+      )}
+
+      {/* Contact & Feedback Modal */}
+      {showFeedbackModal && (
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowFeedbackModal(false);
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 999999,
+            background: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div style={{
+            background: 'linear-gradient(135deg, #0b1528 0%, #020617 100%)',
+            border: '1px solid rgba(0, 106, 103, 0.5)',
+            borderRadius: '16px',
+            maxWidth: '480px',
+            width: '100%',
+            padding: '28px',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.85)',
+            position: 'relative'
+          }}>
+            <button
+              onClick={() => setShowFeedbackModal(false)}
+              style={{
+                position: 'absolute',
+                top: '18px',
+                right: '18px',
+                background: 'rgba(255,255,255,0.08)',
+                border: 'none',
+                borderRadius: '8px',
+                width: '32px',
+                height: '32px',
+                color: '#cbd5e1',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <X size={16} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(0, 106, 103, 0.3)', border: '1px solid rgba(255, 244, 183, 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Mail size={18} color="#FFF4B7" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>Contact &amp; Support</h3>
+                <p style={{ fontSize: '0.78rem', color: '#cbd5e1', margin: '2px 0 0 0' }}>Send feedback, feature requests, or report an issue</p>
+              </div>
+            </div>
+
+            {feedbackSuccess ? (
+              <div style={{
+                background: 'rgba(16, 185, 129, 0.15)',
+                border: '1px solid rgba(52, 211, 153, 0.35)',
+                color: '#34d399',
+                padding: '20px',
+                borderRadius: '10px',
+                textAlign: 'center',
+                fontSize: '0.9rem',
+                fontWeight: 600
+              }}>
+                <Check size={24} style={{ margin: '0 auto 8px auto', display: 'block' }} />
+                Your message has been sent to OpenSource Connect! Thank you for your feedback.
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitFeedback} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: '4px' }}>Your Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Alex Rivera"
+                    value={feedbackName}
+                    onChange={(e) => setFeedbackName(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(0,0,0,0.35)', color: '#ffffff', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: '4px' }}>Your Email (required)</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="developer@gmail.com"
+                    value={feedbackEmail}
+                    onChange={(e) => setFeedbackEmail(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(0,0,0,0.35)', color: '#ffffff', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: '4px' }}>Subject</label>
+                  <input
+                    type="text"
+                    value={feedbackSubject}
+                    onChange={(e) => setFeedbackSubject(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(0,0,0,0.35)', color: '#ffffff', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: '4px' }}>Message (required)</label>
+                  <textarea
+                    required
+                    rows={4}
+                    placeholder="Describe your suggestion, feedback, or issue..."
+                    value={feedbackMsg}
+                    onChange={(e) => setFeedbackMsg(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(0,0,0,0.35)', color: '#ffffff', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+                  />
+                </div>
+
+                {feedbackError && (
+                  <div style={{ color: '#f87171', fontSize: '0.78rem' }}>{feedbackError}</div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={sendingFeedback}
+                  className="btn-primary"
+                  style={{
+                    padding: '12px',
+                    fontSize: '0.88rem',
+                    fontWeight: 700,
+                    borderRadius: '8px',
+                    cursor: sendingFeedback ? 'wait' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    marginTop: '6px'
+                  }}
+                >
+                  <Send size={15} />
+                  {sendingFeedback ? 'Sending Message...' : 'Send Message'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Global AI Copilot Chat */}

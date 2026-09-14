@@ -10,6 +10,7 @@ const db_1 = require("./config/db");
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const issueRoutes_1 = __importDefault(require("./routes/issueRoutes"));
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
+const emailRoutes_1 = __importDefault(require("./routes/emailRoutes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
@@ -33,6 +34,8 @@ app.use('/api/user', userRoutes_1.default);
 app.use('/user', userRoutes_1.default);
 app.use('/api/issues', issueRoutes_1.default);
 app.use('/issues', issueRoutes_1.default);
+app.use('/api/email', emailRoutes_1.default);
+app.use('/email', emailRoutes_1.default);
 // Start Server (only when running locally, skip in Vercel serverless)
 if (!process.env.VERCEL) {
     app.listen(PORT, () => {
